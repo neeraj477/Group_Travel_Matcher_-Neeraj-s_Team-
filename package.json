@@ -1,0 +1,15 @@
+{
+  "name": "tripmate",
+  "private": true,
+  "description": "Group Travel Matcher: find travel companions, book one stay together, split it fairly.",
+  "scripts": {
+    "postinstall": "cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently -k -n api,web -c yellow,cyan \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "test": "npm test --prefix backend",
+    "typecheck": "npm run typecheck --prefix backend && npm run typecheck --prefix frontend",
+    "reset-db": "node -e \"for (const f of ['app.db','app.db-wal','app.db-shm']) require('fs').rmSync(f,{force:true}); console.log('Database removed; it is re-seeded from data/ on next start.')\""
+  },
+  "devDependencies": {
+    "concurrently": "9.1.0"
+  }
+}
