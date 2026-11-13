@@ -21,8 +21,6 @@ export default function FindGroups() {
     interests: me?.interests ?? [], gender_preference: me?.gender_preference ?? "ANY",
   });
   const [budgetText, setBudgetText] = useState(form.budget_inr ? String(form.budget_inr) : "");
-  const [filterInts, setFilterInts] = useState<string[]>([]);
-  const [mix, setMix] = useState("");
   const [sort, setSort] = useState("best");
   const [res, setRes] = useState<SearchResponse | null>(null);
   const [err, setErr] = useState<{ field?: string; msg: string } | null>(null);
@@ -39,10 +37,10 @@ export default function FindGroups() {
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   }, [intOpen]);
 
-  async function run(input: SearchInput, opts: { filterInts?: string[]; mix?: string; sort?: string } = {}) {
+  async function run(input: SearchInput, opts: { sort?: string } = {}) {
     setBusy(true); setErr(null);
     try {
-      const r = await api<SearchResponse>("/search", { body: { ...input, filter_interests: opts.filterInts ?? filterInts, mix: opts.mix ?? mix, sort: opts.sort ?? sort } });
+      const r = await api<SearchResponse>("/search", { body: { ...input, sort: opts.sort ?? sort } });
       setRes(r);
       lastSearch.set({ input, search_id: r.search_id });
     } catch (e) {
@@ -58,8 +56,8 @@ export default function FindGroups() {
     if (!form.check_in || !form.check_out) return setErr({ field: "check_in", msg: "Pick your check-in and check-out dates." });
     if (!(+budgetText > 0)) return setErr({ field: "budget_inr", msg: "Enter your budget per person." });
     const input = { ...form, budget_inr: +budgetText };
-    setForm(input); setFilterInts([]);
-    void run(input, { filterInts: [] });
+    setForm(input);
+    void run(input);
   }
   function applyFix(patch: Partial<SearchInput>) {
     const input = { ...form, budget_inr: +budgetText || form.budget_inr, ...patch };
@@ -68,11 +66,10 @@ export default function FindGroups() {
     void run(input);
     toast("Search updated — fix applied.");
   }
-  const refine = (o: { filterInts?: string[]; mix?: string; sort?: string }) => {
-    if (o.filterInts) setFilterInts(o.filterInts);
-    if (o.mix !== undefined) setMix(o.mix);
-    if (o.sort) setSort(o.sort);
-    if (res) void run(res.search, o);
+  // Sort is the only live control in Refine; interests and group mix just show what the search already used.
+  const resort = (next: string) => {
+    setSort(next);
+    if (res) void run(res.search, { sort: next });
   };
 
   const nights = form.check_in && form.check_out && form.check_out > form.check_in ? nightsOf(form.check_in, form.check_out) : 0;
@@ -139,23 +136,18 @@ export default function FindGroups() {
       <div className="wrap" style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 26, paddingTop: 24 }}>
         <div className="gl rise" style={{ alignSelf: "start", padding: 20 }}>
           <h3>Refine</h3>
-          <Field label="Shared interests" style={{ marginTop: 14 }} hint={res ? "Only groups sharing all selected" : "Search first"}>
+          <Field label="Shared interests" style={{ marginTop: 14 }} hint={res ? "From your search" : "From your profile"}>
             <div className="chips">
-              {(res?.search.interests ?? form.interests).map((i) => (
-                <button key={i} className={"chip" + (filterInts.includes(i) ? " on" : "")} disabled={!res}
-                  onClick={() => refine({ filterInts: filterInts.includes(i) ? filterInts.filter((x) => x !== i) : [...filterInts, i] })}>{label(i)}</button>
-              ))}
+              {(res?.search.interests ?? form.interests).map((i) => <span key={i} className="chip on">{label(i)}</span>)}
             </div>
           </Field>
-          <Field label="Group mix" style={{ marginTop: 16 }}>
+          <Field label="Group mix" style={{ marginTop: 16 }} hint="From your travel-with choice">
             <div className="chips">
-              {[["", "Any"], ["ALL_WOMEN", "All women"], ["ALL_MEN", "All men"], ["MIXED", "Mixed"]].map(([v, l]) => (
-                <button key={v} className={"chip" + (mix === v ? " on" : "")} disabled={!res} onClick={() => refine({ mix: v })}>{l}</button>
-              ))}
+              <span className="chip on">{(res?.search.gender_preference ?? form.gender_preference) === "SAME_GENDER" ? (me.gender === "FEMALE" ? "All women" : "All men") : "Any"}</span>
             </div>
           </Field>
           <Field label="Sort" style={{ marginTop: 16 }}>
-            <select className="in" value={sort} onChange={(e) => refine({ sort: e.target.value })}>
+            <select className="in" value={sort} onChange={(e) => resort(e.target.value)}>
               <option value="best">Best match</option><option value="earliest">Earliest check-in</option><option value="budget">Closest budget</option>
             </select>
           </Field>
