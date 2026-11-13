@@ -6,7 +6,7 @@ import type { Group, Traveller } from "./db";
 import { budgetRange, evaluate, sharedNights, suggestFix, validateTrip, type SeekerSearch } from "./rules";
 import { splitShares } from "./hotels";
 
-const travellers = new Map<string, Traveller>(seedTravellers.map((t) => [t.traveller_id, { ...t, id: t.traveller_id }]));
+const travellers = new Map<string, Traveller>(seedTravellers.map((t) => [t.traveller_id, { ...t, id: t.traveller_id, username: t.traveller_id.toLowerCase() }]));
 const groups: Group[] = seedGroups.map((g) => ({ ...g, id: g.group_id }));
 const matchIds = (s: SeekerSearch) =>
   groups.filter((g) => evaluate(s, g, travellers.get(g.owner_id)!).every((r) => r.pass)).map((g) => g.id);

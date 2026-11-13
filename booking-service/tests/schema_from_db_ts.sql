@@ -5,7 +5,8 @@
 CREATE TABLE IF NOT EXISTS travellers (
   id TEXT PRIMARY KEY, name TEXT NOT NULL, age INTEGER, gender TEXT NOT NULL,
   home_city TEXT, home_airport TEXT, interests TEXT NOT NULL, gender_preference TEXT NOT NULL,
-  is_seed INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  is_seed INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  username TEXT
 );
 CREATE TABLE IF NOT EXISTS groups (
   id TEXT PRIMARY KEY, name TEXT NOT NULL, owner_id TEXT NOT NULL REFERENCES travellers(id),
@@ -47,3 +48,4 @@ CREATE TABLE IF NOT EXISTS messages (
   traveller_id TEXT NOT NULL REFERENCES travellers(id), body TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS travellers_username ON travellers(username COLLATE NOCASE);

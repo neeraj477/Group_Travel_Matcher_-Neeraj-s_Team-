@@ -20,6 +20,7 @@ export default function ProfilePage() {
         <div style={{ flex: 1 }}>
           <div className="eyebrow">Traveller profile{me?.id === p.id ? " · you" : ""}</div>
           <h1 style={{ marginTop: 6, fontSize: 30 }}>{p.name}{p.age ? <>, <em>{p.age}</em></> : null}</h1>
+          <div className="mu2" style={{ marginTop: 2 }}>@{p.username}</div>
           <div className="mu" style={{ marginTop: 4 }}>{p.home_city} · {p.home_airport} · {p.gender === "FEMALE" ? "woman" : "man"} · travels with {p.gender_preference === "SAME_GENDER" ? (p.gender === "FEMALE" ? "women only" : "men only") : "anyone"}</div>
           <div className="chips" style={{ marginTop: 14 }}>{p.interests.map((i) => <span className="chip on" key={i}>{label(i)}</span>)}</div>
         </div>

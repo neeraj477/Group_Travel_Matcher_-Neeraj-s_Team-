@@ -2,7 +2,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import cors from "cors";
 import crypto from "node:crypto";
 import { cities, cityByName, departureCities, IMAGES_DIR, interests, roomById, hotelById } from "./catalog";
-import { db, getBooking, getGroup, getTraveller, listGroups, listTravellers, type Group, type Traveller } from "./db";
+import { db, getBooking, getGroup, getTraveller, listGroups, listTravellers, USERNAME_RE, usernameTaken, type Group, type Traveller } from "./db";
 import {
   evaluate, score, suggestFix, validateInterests, validateTrip, ValidationError, nightList, nightsBetween,
   sharedNights, budgetRange, WINDOW_START, WINDOW_END, type SeekerSearch,
@@ -35,7 +35,7 @@ function groupOr404(id: string): Group {
 function requireMember(g: Group, t: Traveller) {
   if (!g.member_ids.includes(t.id)) throw new HttpError(403, "Only group members can do this.");
 }
-const profile = (t: Traveller) => ({ id: t.id, name: t.name, age: t.age, gender: t.gender, home_city: t.home_city, interests: t.interests, gender_preference: t.gender_preference });
+const profile = (t: Traveller) => ({ id: t.id, username: t.username, name: t.name, age: t.age, gender: t.gender, home_city: t.home_city, interests: t.interests, gender_preference: t.gender_preference });
 const nextId = (table: "travellers" | "groups", prefix: string, pad: number) => {
   const ids = (db.prepare(`SELECT id FROM ${table} WHERE id LIKE ?`).all(`${prefix}%`) as { id: string }[]).map((r) => parseInt(r.id.slice(prefix.length), 10) || 0);
   return prefix + String(Math.max(0, ...ids) + 1).padStart(pad, "0");
@@ -68,9 +68,21 @@ app.get("/api/meta", wrap(() => ({
 })));
 
 // ---------- travellers (M1, G2) ----------
+const USERNAME_RULE = "Use 3–20 characters: lowercase letters, numbers or _.";
+const USERNAME_TAKEN = "That username is already taken. Try another.";
+// Live check for the sign-up form. The POST below enforces the same rules, so this is only a convenience.
+app.get("/api/usernames/:username", wrap((req) => {
+  const u = String(req.params.username).trim().toLowerCase();
+  if (!USERNAME_RE.test(u)) return { username: u, available: false, reason: USERNAME_RULE };
+  if (usernameTaken(u)) return { username: u, available: false, reason: USERNAME_TAKEN };
+  return { username: u, available: true, reason: null };
+}));
 app.get("/api/travellers", wrap(() => listTravellers().map(profile)));
 app.post("/api/travellers", wrap((req) => {
   const b = req.body ?? {};
+  const username = typeof b.username === "string" ? b.username.trim().toLowerCase() : "";
+  if (!USERNAME_RE.test(username)) throw new ValidationError("username", USERNAME_RULE);
+  if (usernameTaken(username)) throw new ValidationError("username", USERNAME_TAKEN);
   const name = typeof b.name === "string" ? b.name.trim() : "";
   if (name.length < 2 || name.length > 60) throw new ValidationError("name", "Enter your name (2–60 characters).");
   const age = Number(b.age);
@@ -81,8 +93,14 @@ app.post("/api/travellers", wrap((req) => {
   if (!home) throw new ValidationError("home_city", "Pick your home city.");
   const ints = validateInterests(b.interests, 2);
   const id = nextId("travellers", "T-", 3);
-  db.prepare(`INSERT INTO travellers (id,name,age,gender,home_city,home_airport,interests,gender_preference) VALUES (?,?,?,?,?,?,?,?)`)
-    .run(id, name, age, b.gender, home.city, home.airport, JSON.stringify(ints), b.gender_preference);
+  try {
+    db.prepare(`INSERT INTO travellers (id,username,name,age,gender,home_city,home_airport,interests,gender_preference) VALUES (?,?,?,?,?,?,?,?,?)`)
+      .run(id, username, name, age, b.gender, home.city, home.airport, JSON.stringify(ints), b.gender_preference);
+  } catch (e) {
+    // Two people submitting the same name at the same moment: the unique index catches the second one.
+    if ((e as { code?: string }).code === "SQLITE_CONSTRAINT_UNIQUE") throw new ValidationError("username", USERNAME_TAKEN);
+    throw e;
+  }
   return profile(getTraveller(id)!);
 }));
 app.get("/api/travellers/:id", wrap((req) => {

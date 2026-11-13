@@ -13,7 +13,8 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS travellers (
   id TEXT PRIMARY KEY, name TEXT NOT NULL, age INTEGER, gender TEXT NOT NULL,
   home_city TEXT, home_airport TEXT, interests TEXT NOT NULL, gender_preference TEXT NOT NULL,
-  is_seed INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  is_seed INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  username TEXT
 );
 CREATE TABLE IF NOT EXISTS groups (
   id TEXT PRIMARY KEY, name TEXT NOT NULL, owner_id TEXT NOT NULL REFERENCES travellers(id),
@@ -80,9 +81,34 @@ if (count === 0) {
   })();
 }
 
+// ---------- usernames ----------
+// Added after launch, so an older app.db gets the column here. Uniqueness ignores case ("Priya" = "priya").
+if (!(db.prepare("PRAGMA table_info(travellers)").all() as { name: string }[]).some((c) => c.name === "username"))
+  db.exec("ALTER TABLE travellers ADD COLUMN username TEXT");
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS travellers_username ON travellers(username COLLATE NOCASE)");
+
+export const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+export const usernameTaken = (u: string) => !!db.prepare("SELECT 1 FROM travellers WHERE username = ? COLLATE NOCASE").get(u);
+
+// Travellers created before usernames existed (the 24 seeds, and anyone who signed up earlier) get a random one.
+const ADJ = ["swift", "sunny", "quiet", "brave", "lucky", "misty", "wild", "calm", "bold", "merry"];
+const NOUN = ["lotus", "falcon", "maple", "comet", "otter", "harbor", "dune", "ember", "koi", "summit"];
+function randomUsername(): string {
+  const pick = (a: string[]) => a[Math.floor(Math.random() * a.length)];
+  for (;;) {
+    const u = `${pick(ADJ)}_${pick(NOUN)}_${Math.floor(100 + Math.random() * 900)}`;
+    if (!usernameTaken(u)) return u;
+  }
+}
+const unnamed = db.prepare("SELECT id FROM travellers WHERE username IS NULL").all() as { id: string }[];
+if (unnamed.length) {
+  const set = db.prepare("UPDATE travellers SET username = ? WHERE id = ?");
+  db.transaction(() => { for (const { id } of unnamed) set.run(randomUsername(), id); })();
+}
+
 // ---------- row helpers ----------
 export interface Traveller {
-  id: string; name: string; age: number | null; gender: "FEMALE" | "MALE"; home_city: string | null;
+  id: string; username: string; name: string; age: number | null; gender: "FEMALE" | "MALE"; home_city: string | null;
   home_airport: string | null; interests: string[]; gender_preference: "ANY" | "SAME_GENDER";
 }
 export interface Group {

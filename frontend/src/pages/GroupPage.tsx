@@ -388,15 +388,11 @@ function BookedBanner({ b, onOpen, onLeave }: { b: Booking; onOpen: () => void; 
 }
 
 function BookedModal({ b, g, fresh, onClose }: { b: Booking; g: GroupDetail; fresh: boolean; onClose: () => void }) {
-  function download() {
-    const lines = [
-      `Tripmate booking ${b.id}`, `${b.hotel.name} (${b.hotel.area}, ${g.city})`, `${b.rooms} x ${b.room.name}`,
-      `${dLong(g.check_in)} -> ${dLong(g.check_out)} · ${b.nights.length} nights`, `Group total: ${inr(b.total_inr)}`, "",
-      "Each person pays:", ...b.shares.map((s) => `  ${s.name}: ${paise(s.amount_paise)}`),
-    ];
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/plain" }));
-    a.download = `${b.id}.txt`; a.click();
+  const [pdfBusy, setPdfBusy] = useState(false);
+  async function download() {
+    setPdfBusy(true);
+    try { await (await import("../bookingPdf")).downloadBookingPdf(b, g); }
+    finally { setPdfBusy(false); }
   }
   return (
     <>
@@ -421,7 +417,7 @@ function BookedModal({ b, g, fresh, onClose }: { b: Booking; g: GroupDetail; fre
             </div>
           ))}
           <div className="hint" style={{ marginTop: 12 }}>Shares are in paise and always add up to the total; any leftover paisa goes to the first members.</div>
-          <div className="row" style={{ marginTop: 20 }}><button className="btn" style={{ flex: 1 }} onClick={download}>Download summary</button><button className="btn bp" style={{ flex: 1 }} onClick={onClose}>Back to group</button></div>
+          <div className="row" style={{ marginTop: 20 }}><button className="btn" style={{ flex: 1 }} onClick={download} disabled={pdfBusy}>{pdfBusy ? "Preparing PDF…" : "Download PDF summary"}</button><button className="btn bp" style={{ flex: 1 }} onClick={onClose}>Back to group</button></div>
         </div>
       </Modal>
     </>

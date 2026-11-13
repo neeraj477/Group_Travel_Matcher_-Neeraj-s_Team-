@@ -28,7 +28,7 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
 // ---------- types (mirror the backend responses) ----------
 export type Gender = "FEMALE" | "MALE";
 export type GenderPref = "ANY" | "SAME_GENDER";
-export interface Profile { id: string; name: string; age: number | null; gender: Gender; home_city: string | null; interests: string[]; gender_preference: GenderPref }
+export interface Profile { id: string; username: string; name: string; age: number | null; gender: Gender; home_city: string | null; interests: string[]; gender_preference: GenderPref }
 export interface Me extends Profile { home_airport: string | null; pending_requests: number; unread_notifications: number }
 export interface Notification {
   id: number; kind: string; body: string; created_at: string; read: boolean;
