@@ -51,6 +51,10 @@ Read ../CLAUDE.md, ../CONTRACT.md and those two Express files before planning.
 ## Code style
 - Readable, senior-grade. Plain functions under ~30 lines, type hints, comments explain why. No clever one-liners.
 - Business rules live only in pricing.py; routes call it and run SQL.
+- Every file starts with a docstring: what it owns, and where it sits in a request (route → deps → pricing → SQL).
+- Every function has a docstring: what it returns, and which CONTRACT.md rule or Express line it mirrors.
+- Comment any non-obvious line (mode=rw, BEGIN IMMEDIATE, stable sort, paise maths) with WHY, in plain English.
+- No comments that just repeat the code.
 
 ## How to work with me
 - Before writing code, give a plan in 5 bullets and wait for my OK.
