@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tripmate · Group Travel Matcher</title>
+    <script>
+      // Apply the saved theme before the app renders (dark unless the user picked light).
+      try { document.documentElement.dataset.theme = localStorage.getItem("tripmate.theme") === "light" ? "light" : "dark"; }
+      catch { document.documentElement.dataset.theme = "dark"; }
+    </script>
   </head>
   <body>
     <div id="root"></div>

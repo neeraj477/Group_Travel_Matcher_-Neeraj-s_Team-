@@ -41,7 +41,7 @@ export default function Requests() {
             <div><div className="eyebrow">Your group · {g.city} · {range(g.check_in, g.check_out)} 2027</div><h1 style={{ marginTop: 6 }}>{splitName(g.name)}</h1></div>
             <div className="row">
               <span className="glassbadge">{filled} of {g.max_size} places filled</span>
-              {data.pending.length > 0 && <span className="glassbadge" style={{ color: "#ffb3c4", borderColor: "rgba(255,107,138,.5)" }}>● {data.pending.length} waiting for you</span>}
+              {data.pending.length > 0 && <span className="glassbadge" style={{ color: "var(--badt)", borderColor: "var(--badline)" }}>● {data.pending.length} waiting for you</span>}
               <Link to={`/groups/${g.id}`} className="btn sm">Group page →</Link>
             </div>
           </div>

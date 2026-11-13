@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError, type Gender, type GenderPref, type Profile } from "../api";
-import { Avatar, Field, InterestChips, Modal, Scene, Seg, useApp, useInterestLabel } from "../ui";
+import { Avatar, Field, InterestChips, Modal, Scene, Seg, ThemeToggle, useApp, useInterestLabel } from "../ui";
 
 export default function SignUp() {
   const { meta, setUser, toast, me } = useApp();
@@ -50,6 +50,7 @@ export default function SignUp() {
       <div className="nav" style={{ position: "relative" }}>
         <Link to="/" className="logo"><div className="mark" /><span>Trip<em>mate</em></span></Link>
         <div className="sp" />
+        <ThemeToggle />
         {me && <Link to="/find" className="nl" style={{ marginRight: 12 }}>Continue as {me.name.split(" ")[0]} →</Link>}
         <button className="linkish nl" style={{ color: "var(--mu)", fontSize: 11, letterSpacing: ".2em", textTransform: "uppercase" }} onClick={() => setPicking(true)}>Already joined? Pick your profile</button>
       </div>
@@ -57,7 +58,7 @@ export default function SignUp() {
         <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(90deg,rgba(8,9,12,.72) 0%,rgba(8,9,12,.25) 45%,rgba(8,9,12,.05) 60%,rgba(8,9,12,.55) 100%)" }} />
       </Scene>
       <div className="wrap" style={{ display: "grid", gridTemplateColumns: "1fr 520px", gap: 40, alignItems: "center", minHeight: "calc(100vh - 66px)" }}>
-        <div className="rise" style={{ paddingBottom: 120 }}>
+        <div className="rise on-dark" style={{ paddingBottom: 120 }}>
           <div className="hero-tag">Travel solo. Not alone.</div>
           <div style={{ width: 56, height: 1, background: "#f0c48a", margin: "22px 0" }} />
           <div style={{ fontSize: 17, fontWeight: 300, color: "#e9e6e0", maxWidth: 470, lineHeight: 1.6, textShadow: "0 2px 16px rgba(0,0,0,.6)" }}>
@@ -80,7 +81,7 @@ export default function SignUp() {
             <Field label="Full name" error={errors.name}><input className={"in" + (errors.name ? " e" : "")} value={name} onChange={(e) => setName(e.target.value)} placeholder="Priya Sharma" autoFocus /></Field>
             <Field label="Age" error={errors.age}><input className={"in" + (errors.age ? " e" : "")} value={age} onChange={(e) => setAge(e.target.value.replace(/\D/g, ""))} placeholder="26" inputMode="numeric" /></Field>
             <Field label="Username" style={{ gridColumn: "1 / -1" }} error={errors.username ?? (check.state === "taken" ? check.reason ?? undefined : undefined)}
-            hint={check.state === "checking" ? "Checking…" : check.state === "ok" ? <span style={{ color: "#8fd19e" }}>@{username} is available</span> : "Unique to you. Lowercase letters, numbers and _."}>
+            hint={check.state === "checking" ? "Checking…" : check.state === "ok" ? <span style={{ color: "var(--okt)" }}>@{username} is available</span> : "Unique to you. Lowercase letters, numbers and _."}>
             <div style={{ position: "relative" }}>
               <span className="mu2" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>@</span>
               <input className={"in" + (errors.username || check.state === "taken" ? " e" : "")} style={{ paddingLeft: 30 }} value={username} placeholder="priya_travels" autoComplete="off" spellCheck={false} maxLength={20}

@@ -52,7 +52,7 @@ function PublicGroup({ g, reload }: { g: GroupDetail; reload: () => void }) {
       <div className="wrap" style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24 }}>
         <div className="gl rise">
           <h3>Proposed itinerary</h3>
-          <p style={{ marginTop: 10, lineHeight: 1.7, color: "#d6daf0" }}>{g.itinerary || "No itinerary yet."}</p>
+          <p style={{ marginTop: 10, lineHeight: 1.7, color: "var(--body2)" }}>{g.itinerary || "No itinerary yet."}</p>
           <div className="grid2" style={{ marginTop: 22 }}>
             <div><div className="lbl">Dates</div>{dLong(g.check_in)} → {dLong(g.check_out)}<div className="mu2" style={{ fontSize: 11.5 }}>Local time · {g.timezone}</div></div>
             <div><div className="lbl">Budget per person</div>~{inr(g.budget_inr)}</div>
@@ -169,7 +169,7 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
       </Scene>
       <div className="wrap" style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, paddingTop: 24 }}>
         {g.is_owner && g.pending_count > 0 && (
-          <Link to={`/groups/${g.id}/requests`} className="gl rise" style={{ gridColumn: "1 / -1", padding: "12px 20px", borderColor: "rgba(255,107,138,.45)" }}>
+          <Link to={`/groups/${g.id}/requests`} className="gl rise" style={{ gridColumn: "1 / -1", padding: "12px 20px", borderColor: "var(--badline)" }}>
             <div className="row"><span className="bell">🔔<b>{g.pending_count}</b></span><span style={{ marginLeft: 8 }}>{g.pending_count} join request{g.pending_count > 1 ? "s" : ""} waiting for you</span><span className="sp" /><span className="btn sm">Review →</span></div>
           </Link>
         )}
@@ -177,10 +177,10 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
           {steps.map((s, i) => (
             <div key={s.label} className="row" style={{ gap: 0, flex: i < steps.length - 1 ? 1 : "none" }}>
               <div className="row" style={{ gap: 8, flex: "none" }}>
-                <span className="tick" style={s.done ? {} : s.active ? { background: "#f0c48a", color: "#1a1208", boxShadow: "0 0 0 5px rgba(240,196,138,.2)" } : { background: "rgba(255,255,255,.08)", color: "var(--mu2)" }}>{s.done ? "✓" : i + 1}</span>
-                <span style={{ fontSize: 12.5, color: s.done || s.active ? "#fff" : "var(--mu2)", fontWeight: s.active ? 600 : 400 }}>{s.label === "Group formed" && !s.done ? "Waiting for members" : s.label}</span>
+                <span className="tick" style={s.done ? {} : s.active ? { background: "var(--amb)", color: "var(--on-amb)", boxShadow: "0 0 0 5px var(--ambline)" } : { background: "var(--track)", color: "var(--mu2)" }}>{s.done ? "✓" : i + 1}</span>
+                <span style={{ fontSize: 12.5, color: s.done || s.active ? "var(--strong)" : "var(--mu2)", fontWeight: s.active ? 600 : 400 }}>{s.label === "Group formed" && !s.done ? "Waiting for members" : s.label}</span>
               </div>
-              {i < steps.length - 1 && <div style={{ flex: 1, height: 2, margin: "0 14px", borderRadius: 2, background: s.done ? (steps[i + 1].done ? "#7fd6a8" : "linear-gradient(90deg,#7fd6a8,#f0c48a)") : "rgba(255,255,255,.1)" }} />}
+              {i < steps.length - 1 && <div style={{ flex: 1, height: 2, margin: "0 14px", borderRadius: 2, background: s.done ? (steps[i + 1].done ? "var(--ok)" : "linear-gradient(90deg,var(--ok),var(--amb))") : "var(--track)" }} />}
             </div>
           ))}
           <span className="pill pg" style={{ marginLeft: 18 }}>🔒 Dates locked</span>
@@ -221,16 +221,16 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
               {saved.map((s, i) => (
                 <button key={s.room} onClick={() => setSelected(s.room)} style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: 0, cursor: "pointer", marginTop: i ? 14 : 0, padding: 0, opacity: choice?.room === s.room ? 1 : 0.65 }}>
                   <div className="row" style={{ justifyContent: "space-between" }}><span>{choice?.room === s.room ? "● " : "○ "}{s.hotel.hotel.name} <span className="mu2">· {s.opt.room_name}</span></span><b className="num">{s.who.length} / {guests}</b></div>
-                  <div className="meter"><i style={{ width: `${(s.who.length / guests) * 100}%`, background: s.who.length === guests ? "#7fd6a8" : "#f0c48a" }} /></div>
+                  <div className="meter"><i style={{ width: `${(s.who.length / guests) * 100}%`, background: s.who.length === guests ? "var(--ok)" : "var(--amb)" }} /></div>
                 </button>
               ))}
             </div>
             {booking ? (
-              <div style={{ marginTop: 18, padding: 14, borderRadius: 4, background: "rgba(62,230,168,.08)", border: "1px solid rgba(62,230,168,.3)" }}><b style={{ color: "#8ff0c9", fontWeight: 600 }}>Booked & locked 🔒</b><div className="mu" style={{ fontSize: 12, marginTop: 3 }}>{booking.hotel.name} · {booking.id}</div></div>
+              <div style={{ marginTop: 18, padding: 14, borderRadius: 4, background: "var(--okbg)", border: "1px solid var(--okline)" }}><b style={{ color: "var(--okt)", fontWeight: 600 }}>Booked & locked 🔒</b><div className="mu" style={{ fontSize: 12, marginTop: 3 }}>{booking.hotel.name} · {booking.id}</div></div>
             ) : choice && (choice.who.length === guests ? (
-              <div style={{ marginTop: 18, padding: 14, borderRadius: 4, background: "rgba(62,230,168,.08)", border: "1px solid rgba(62,230,168,.3)" }}><b style={{ color: "#8ff0c9", fontWeight: 600 }}>Everyone agrees 🎉</b><div className="mu" style={{ fontSize: 12, marginTop: 3 }}>Any member can finalise. Once booked, it's locked.</div></div>
+              <div style={{ marginTop: 18, padding: 14, borderRadius: 4, background: "var(--okbg)", border: "1px solid var(--okline)" }}><b style={{ color: "var(--okt)", fontWeight: 600 }}>Everyone agrees 🎉</b><div className="mu" style={{ fontSize: 12, marginTop: 3 }}>Any member can finalise. Once booked, it's locked.</div></div>
             ) : (
-              <div style={{ marginTop: 18, padding: 14, borderRadius: 4, background: "rgba(240,196,138,.06)", border: "1px solid rgba(240,196,138,.3)" }}><b style={{ color: "var(--amb)", fontWeight: 600 }}>Not everyone has saved this yet</b><div className="mu" style={{ fontSize: 12, marginTop: 3 }}>Agree in chat first — any member can still finalise.</div></div>
+              <div style={{ marginTop: 18, padding: 14, borderRadius: 4, background: "var(--ambbg)", border: "1px solid var(--ambline)" }}><b style={{ color: "var(--amb)", fontWeight: 600 }}>Not everyone has saved this yet</b><div className="mu" style={{ fontSize: 12, marginTop: 3 }}>Agree in chat first — any member can still finalise.</div></div>
             ))}
             {!booking && <button className="btn bp" style={{ width: "100%", marginTop: 14, height: 44 }} disabled={!choice || !choice.opt.available} onClick={() => choice && setConfirm({ hotel: choice.hotel, opt: choice.opt })}>Finalise booking for the group</button>}
           </div>
@@ -244,11 +244,11 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
       {booking && (leaving === "locked" || leaving === "busy") && (
         <Modal onClose={() => leaving === "locked" && setLeaving(null)} width={460}>
           <div style={{ padding: "26px 28px" }}>
-            <div className="eyebrow" style={{ color: "#ff9fb3" }}>Leave group</div>
+            <div className="eyebrow" style={{ color: "var(--badt)" }}>Leave group</div>
             <h2 style={{ marginTop: 8 }}>Your stay is locked 🔒</h2>
             <p className="mu" style={{ marginTop: 10, lineHeight: 1.6, fontSize: 13.5 }}>
-              The stay at <b style={{ color: "#fff", fontWeight: 600 }}>{booking.hotel.name}</b> is already booked for the group, and the booking won't change if you leave.
-              {myShare !== undefined && <> Your share (<b style={{ color: "#fff", fontWeight: 600 }}>{paise(myShare)}</b>) stays on it, so please settle it with your group.</>}
+              The stay at <b style={{ color: "var(--strong)", fontWeight: 600 }}>{booking.hotel.name}</b> is already booked for the group, and the booking won't change if you leave.
+              {myShare !== undefined && <> Your share (<b style={{ color: "var(--strong)", fontWeight: 600 }}>{paise(myShare)}</b>) stays on it, so please settle it with your group.</>}
               {" "}{firstName(g.owner.name)} will get a friendly note that you've left.
             </p>
             <div className="row" style={{ marginTop: 22 }}>
@@ -261,10 +261,10 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
       {!booking && (leaving === "ask" || leaving === "busy") && (
         <Modal onClose={() => leaving === "ask" && setLeaving(null)} width={460}>
           <div style={{ padding: "26px 28px" }}>
-            <div className="eyebrow" style={{ color: "#ff9fb3" }}>Leave group</div>
+            <div className="eyebrow" style={{ color: "var(--badt)" }}>Leave group</div>
             <h2 style={{ marginTop: 8 }}>Step back from this trip?</h2>
             <p className="mu" style={{ marginTop: 10, lineHeight: 1.6, fontSize: 13.5 }}>
-              You'll leave <b style={{ color: "#fff", fontWeight: 600 }}>{g.name}</b>. Your groupmates will get a friendly note, and your spot opens up for a new traveller.
+              You'll leave <b style={{ color: "var(--strong)", fontWeight: 600 }}>{g.name}</b>. Your groupmates will get a friendly note, and your spot opens up for a new traveller.
               Changed your mind later? You can ask to join again while there's space.
             </p>
             <div className="row" style={{ marginTop: 22 }}>
@@ -283,7 +283,7 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
             <div className="mu" style={{ marginTop: 4 }}>{confirm.opt.rooms_needed} × {confirm.opt.room_name} · {g.city} · {dLong(g.check_in)} → {dLong(g.check_out)} · {g.nights} nights</div>
             <div className="rule" style={{ marginTop: 16 }}>Price per room per night<span className="v">{inr(confirm.opt.price_per_night)}</span></div>
             <div className="rule">{inr(confirm.opt.price_per_night)} × {confirm.opt.rooms_needed} room{confirm.opt.rooms_needed > 1 ? "s" : ""} × {g.nights} nights<span className="v">{inr(confirm.opt.total_inr)}</span></div>
-            <div className="rule">Each of {guests} pays<span className="v" style={{ color: "#8ff0c9" }}>≈ {inr(confirm.opt.per_member_inr)}</span></div>
+            <div className="rule">Each of {guests} pays<span className="v" style={{ color: "var(--okt)" }}>≈ {inr(confirm.opt.per_member_inr)}</span></div>
             <div className="hint" style={{ marginTop: 12 }}>One booking for the whole group. Once confirmed it's locked and can't be edited.</div>
             <div className="row" style={{ marginTop: 20 }}><button className="btn" style={{ flex: 1 }} onClick={() => setConfirm(null)}>Not yet</button><button className="btn bp" style={{ flex: 1 }} onClick={book}>Confirm booking</button></div>
           </div>
@@ -338,7 +338,7 @@ function HotelCard({ r, i, n, g, saves, lowest, locked, onSave }: { r: HotelResu
       </div>
       <div className="divv" style={{ textAlign: "right" }}>
         <div className="mu2" style={{ fontSize: 11 }}>Total · {o.nights} nights</div><div className="num" style={{ fontWeight: 600 }}>{inr(o.total_inr)}</div>
-        <div className="mu2" style={{ fontSize: 11, marginTop: 10 }}>Each pays</div><div className="price num" style={{ color: "#8ff0c9" }}>{inr(o.per_member_inr)}</div>
+        <div className="mu2" style={{ fontSize: 11, marginTop: 10 }}>Each pays</div><div className="price num" style={{ color: "var(--okt)" }}>{inr(o.per_member_inr)}</div>
         <div className={"pill " + (o.per_member_inr <= lowest ? "pg" : "pa")} style={{ marginTop: 6 }}>{o.per_member_inr <= lowest ? "Fits every budget" : `Over ${inr(lowest)} budget`}</div>
         {!locked && <button className={"btn sm" + (mine ? "" : " bp")} style={{ marginTop: 10, width: "100%" }} onClick={() => onSave(o.room_id)}>{mine ? "★ Saved" : "☆ Save option"}</button>}
       </div>
@@ -378,7 +378,7 @@ function MapCard({ hotels, all, city, saves, guests }: { hotels: HotelResult[]; 
           {hotels.map((r, i) => (
             <div className="rule" style={{ padding: "10px 0" }} key={r.hotel.hotel_id}>
               <span className="tick" style={{ background: color(r), color: "#04140d" }}>{i + 1}</span>
-              <div><b style={{ fontWeight: 600, color: "#fff" }}>{r.hotel.name}</b><div className="mu2" style={{ fontSize: 11.5 }}>{r.hotel.area} · {(saves[r.best!.room_id] ?? []).length}/{guests} saved</div></div>
+              <div><b style={{ fontWeight: 600, color: "var(--strong)" }}>{r.hotel.name}</b><div className="mu2" style={{ fontSize: 11.5 }}>{r.hotel.area} · {(saves[r.best!.room_id] ?? []).length}/{guests} saved</div></div>
               <span className="v">{inr(r.best!.per_member_inr)} pp</span>
             </div>
           ))}
@@ -391,7 +391,7 @@ function MapCard({ hotels, all, city, saves, guests }: { hotels: HotelResult[]; 
 
 function BookedBanner({ b, onOpen, onLeave }: { b: Booking; onOpen: () => void; onLeave?: () => void }) {
   return (
-    <div className="gl hi rise" style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 16, borderColor: "rgba(62,230,168,.55)" }}>
+    <div className="gl hi rise" style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 16, borderColor: "var(--okline)" }}>
       <span className="tick" style={{ width: 28, height: 28, fontSize: 13 }}>✓</span>
       <div style={{ flex: 1 }}><b style={{ fontWeight: 600 }}>Booked: {b.hotel.name}</b><div className="mu" style={{ fontSize: 12.5 }}>{b.rooms} × {b.room.name} · {b.id} · total {inr(b.total_inr)} · locked</div></div>
       {onLeave && <button className="btn sm bleave" onClick={onLeave}>Leave group</button>}
@@ -417,7 +417,7 @@ function BookedModal({ b, g, fresh, onClose }: { b: Booking; g: GroupDetail; fre
         <div style={{ padding: "24px 28px 26px" }}>
           <h1 style={{ fontSize: 30 }}>{splitName(b.hotel.name)}</h1>
           <div className="mu" style={{ marginTop: 4 }}>{b.rooms > 1 ? `${b.rooms} × ` : ""}{b.room.name} · {g.city} · {dLong(g.check_in).replace(" 2027", "")} → {dLong(g.check_out)} · {b.nights.length} nights</div>
-          <div className="row" style={{ marginTop: 16, justifyContent: "space-between", padding: "10px 14px", borderRadius: 4, background: "rgba(255,255,255,.05)", border: "1px solid var(--line)" }}>
+          <div className="row" style={{ marginTop: 16, justifyContent: "space-between", padding: "10px 14px", borderRadius: 4, background: "var(--surf)", border: "1px solid var(--line)" }}>
             <span className="mu2">Booking ID</span><b style={{ fontFamily: "ui-monospace,Consolas,monospace", letterSpacing: 1.5, fontSize: 13 }}>{b.id}</b>
           </div>
           <div className="row" style={{ justifyContent: "space-between", marginTop: 16 }}><span className="mu">Group total · {b.nights.length} nights</span><span className="price num" style={{ fontSize: 30 }}><CountUp value={b.total_inr} format={inr} /></span></div>
@@ -482,7 +482,7 @@ function Chat({ groupId, meId, members, big = false }: { groupId: string; meId: 
         </div>
       ) : <h3>Group chat</h3>}
       <div ref={box} style={{ marginTop: 12, fontSize: big ? 13.5 : 12.5, height: big ? 460 : undefined, maxHeight: big ? undefined : 300, overflow: "auto", paddingRight: 4,
-        ...(big ? { padding: "6px 14px 6px 6px", background: "rgba(0,0,0,.18)", border: "1px solid var(--line)", borderRadius: 4 } : {}) }}>
+        ...(big ? { padding: "6px 14px 6px 6px", background: "var(--sunk)", border: "1px solid var(--line)", borderRadius: 4 } : {}) }}>
         {msgs.length === 0 && <div className="mu2" style={big ? { textAlign: "center", marginTop: 180 } : {}}>{big ? "No messages yet. Start planning the trip together." : "No messages yet. Say hi and talk through the stays."}</div>}
         {msgs.map((m, i) => {
           const newDay = big && (i === 0 || msgDay(msgs[i - 1].created_at) !== msgDay(m.created_at));
@@ -493,14 +493,14 @@ function Chat({ groupId, meId, members, big = false }: { groupId: string; meId: 
               {m.traveller_id === meId ? (
                 <div className="row" style={{ justifyContent: "flex-end", marginTop: sameSender ? 3 : 8, alignItems: "flex-end", gap: 6 }}>
                   {big && <span className="mu2" style={{ fontSize: 10.5 }}>{msgTime(m.created_at)}</span>}
-                  <div style={{ background: "#f4f2ee", color: "#0b0d11", fontWeight: 500, padding: "8px 12px", borderRadius: "12px 12px 4px 12px", maxWidth: big ? "70%" : "80%", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{m.body}</div>
+                  <div style={{ background: "var(--me-bg)", color: "var(--me-fg)", fontWeight: 500, padding: "8px 12px", borderRadius: "12px 12px 4px 12px", maxWidth: big ? "70%" : "80%", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{m.body}</div>
                 </div>
               ) : (
                 <div className="row" style={{ alignItems: "flex-start", marginTop: sameSender ? 3 : 8 }}>
                   {sameSender && big ? <span style={{ width: 24, flex: "none" }} /> : <Avatar id={m.traveller_id} name={nameOf(m)} size={24} />}
                   <div style={{ maxWidth: big ? "70%" : "80%" }}>
                     {big && !sameSender && <div className="mu2" style={{ fontSize: 11, margin: "0 0 3px 2px" }}><b style={{ color: "var(--mu)", fontWeight: 600 }}>{firstName(nameOf(m))}</b> · {msgTime(m.created_at)}</div>}
-                    <div style={{ background: "rgba(255,255,255,.07)", padding: "8px 12px", borderRadius: "12px 12px 12px 4px", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{m.body}</div>
+                    <div style={{ background: "var(--bubble)", padding: "8px 12px", borderRadius: "12px 12px 12px 4px", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{m.body}</div>
                   </div>
                 </div>
               )}

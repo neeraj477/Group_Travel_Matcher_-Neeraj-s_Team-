@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useTheme } from "./theme";
 import { initials, inr, range, type CostPreview, type Interest, type Me, type Meta, type RuleResult } from "./api";
 import { scene } from "./scenes";
 
@@ -130,4 +131,18 @@ export function Field({ label, error, hint, children, style }: { label: string; 
 
 export function Loading({ text = "Loading…" }: { text?: string }) {
   return <div className="empty mu"><span className="spin" /> <span style={{ marginLeft: 8 }}>{text}</span></div>;
+}
+
+/** Dark / light switch in the top nav. A real switch for screen readers: "Light mode", on or off. */
+export function ThemeToggle() {
+  const [theme, toggle] = useTheme();
+  const light = theme === "light";
+  return (
+    <button type="button" role="switch" aria-checked={light} aria-label="Light mode" title={light ? "Switch to dark mode" : "Switch to light mode"}
+      className={"theme-toggle" + (light ? " on" : "")} onClick={toggle}>
+      <span className="theme-ic" aria-hidden>☾</span>
+      <span className="theme-ic" aria-hidden>☀</span>
+      <span className="theme-knob" aria-hidden />
+    </button>
+  );
 }

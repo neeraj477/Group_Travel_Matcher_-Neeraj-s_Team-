@@ -79,7 +79,7 @@ export default function FindGroups() {
 
   return (
     <>
-      <div style={{ padding: "18px 40px", borderBottom: "1px solid var(--line)", background: "rgba(255,255,255,.02)" }}>
+      <div className="band" style={{ padding: "18px 40px", borderBottom: "1px solid var(--line)" }}>
         <form className="row" style={{ gap: 8, maxWidth: 1360, margin: "0 auto", alignItems: "flex-start" }} onSubmit={(e) => { e.preventDefault(); submit(); }}>
           <select className={"in" + (errAt("city") ? " e" : "")} style={{ flex: 1 }} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} title="Destination">
             <option value="">📍 Destination…</option>
@@ -154,9 +154,9 @@ export default function FindGroups() {
           <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
             <div className="eyebrow" style={{ fontSize: 9.5 }}>How we score</div>
             <div className="mu" style={{ marginTop: 10, fontSize: 12 }}>
-              {[["Shared interests", 40, "#f0c48a"], ["Shared nights", 30, "#cfd6e4"], ["Budget closeness", 30, "#8fb3c9"]].map(([l, w, c], i) => (
+              {[["Shared interests", 40, "var(--sc1)"], ["Shared nights", 30, "var(--sc2)"], ["Budget closeness", 30, "var(--sc3)"]].map(([l, w, c], i) => (
                 <div key={l as string} style={{ marginTop: i ? 8 : 0 }}>
-                  <div className="row" style={{ justifyContent: "space-between" }}><span>{l}</span><b style={{ color: "#fff" }}>{w}%</b></div>
+                  <div className="row" style={{ justifyContent: "space-between" }}><span>{l}</span><b style={{ color: "var(--strong)" }}>{w}%</b></div>
                   <div className="meter"><i style={{ width: `${w}%`, background: c as string }} /></div>
                 </div>
               ))}
@@ -222,7 +222,7 @@ function MatchCard({ m, i, best, search, searchId, onRequested }: { m: Match; i:
         <div className="row">{best && <span className="pill pb">★ Best match</span>}<span className="pill pg"><span className="dot" />All 6 rules</span></div>
         <h2 style={{ marginTop: 10 }}>{splitName(m.name)}</h2>
         <div className="mu" style={{ fontSize: 12.5, marginTop: 3 }}>
-          {m.city} · {range(m.check_in, m.check_out)} · by <Link to={`/travellers/${m.owner.id}`} style={{ color: "#fff", fontWeight: 600 }}>{firstName(m.owner.name)}</Link> · {m.members.length} member{m.members.length > 1 ? "s" : ""} · wants {m.max_size} · ~{inr(m.budget_inr)} pp
+          {m.city} · {range(m.check_in, m.check_out)} · by <Link to={`/travellers/${m.owner.id}`} style={{ color: "var(--strong)", fontWeight: 600 }}>{firstName(m.owner.name)}</Link> · {m.members.length} member{m.members.length > 1 ? "s" : ""} · wants {m.max_size} · ~{inr(m.budget_inr)} pp
         </div>
         <div className="row" style={{ marginTop: 10, gap: 6 }}>
           {m.members.map((p) => <Link key={p.id} to={`/travellers/${p.id}`}><Avatar id={p.id} name={p.name} size={24} /></Link>)}
@@ -256,7 +256,7 @@ function MatchCard({ m, i, best, search, searchId, onRequested }: { m: Match; i:
 
 function NearMisses({ list, onFix }: { list: NearMiss[]; onFix: (p: Partial<SearchInput>) => void }) {
   return (
-    <div className="gl rise" style={{ ["--i" as string]: 3, marginTop: 22, borderColor: "rgba(255,193,107,.35)", background: "rgba(240,196,138,.05)" } as CSSProperties}>
+    <div className="gl rise" style={{ ["--i" as string]: 3, marginTop: 22, borderColor: "var(--ambline)", background: "var(--ambbg)" } as CSSProperties}>
       <div className="row" style={{ justifyContent: "space-between" }}>
         <div><span className="pill pa">Almost a match</span><h2 style={{ marginTop: 8 }}>Change one thing, <em>unlock these</em></h2></div>
         <span className="mu2" style={{ fontSize: 12 }}>Hidden from results because one rule fails</span>

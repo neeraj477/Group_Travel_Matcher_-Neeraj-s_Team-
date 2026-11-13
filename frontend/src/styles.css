@@ -1,8 +1,13 @@
 /* Ported from tripmate-ui-v5.html (base theme + "Jost / amber" override), plus app-only pieces at the end. */
 :root{--ink:#0b0d11;--fg:#f4f2ee;--mu:#a7adb8;--mu2:#7a808c;--line:rgba(255,255,255,.12);--glass:rgba(255,255,255,.055);
---g:linear-gradient(100deg,#ffffff,#f3d7ae);--amb:#f0c48a;--ok:#7fd6a8;--warn:#ffc16b;--bad:#ff6b8a;color-scheme:dark}
+--g:linear-gradient(100deg,#ffffff,#f3d7ae);--amb:#f0c48a;--ok:#7fd6a8;--warn:#ffc16b;--bad:#ff6b8a;color-scheme:dark;
+/* semantic colours used by inline styles; light mode redefines them below */
+--strong:#fff;--body2:#d6daf0;--okt:#8ff0c9;--badt:#ffb3c4;--surf:rgba(255,255,255,.05);--sunk:rgba(0,0,0,.18);--track:rgba(255,255,255,.08);
+--okbg:rgba(62,230,168,.08);--okline:rgba(62,230,168,.3);--ambbg:rgba(240,196,138,.06);--ambline:rgba(240,196,138,.3);--badline:rgba(255,107,138,.45);
+--on-amb:#1a1208;--me-bg:#f4f2ee;--me-fg:#0b0d11;--bubble:rgba(255,255,255,.07);--ring:rgba(255,255,255,.35);--ring-a:#f0c48a;--ring-b:#ffffff;
+--sc1:#f0c48a;--sc2:#cfd6e4;--sc3:#8fb3c9}
 *{box-sizing:border-box;margin:0;padding:0}button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
-body{font-family:Jost,Inter,sans-serif;background:#0b0d11;color:var(--fg);font-size:14px;line-height:1.45;letter-spacing:.1px;-webkit-font-smoothing:antialiased;min-height:100vh}
+body{font-family:Jost,Inter,sans-serif;background:var(--ink);color:var(--fg);font-size:14px;line-height:1.45;letter-spacing:.1px;-webkit-font-smoothing:antialiased;min-height:100vh}
 a{color:inherit;text-decoration:none}
 .app{position:relative;min-height:100vh;isolation:isolate;overflow-x:hidden}
 .aur{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
@@ -175,8 +180,102 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:11px;background:rgba(
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.2);border-top-color:var(--amb);animation:rot .8s linear infinite;display:inline-block}
 @keyframes rot{to{transform:rotate(360deg)}}
 .menu{position:absolute;right:0;top:44px;width:220px;padding:8px;z-index:40}
+/* Dropdowns inside the nav: the nav's own backdrop-filter stops theirs from working, so give them a solid surface. */
+.nav .menu,.nav .notif{background:#12151b;backdrop-filter:none;box-shadow:0 24px 60px -12px rgba(0,0,0,.75)}
 .menu button,.menu a{display:block;width:100%;text-align:left;padding:9px 10px;border:0;background:none;cursor:pointer;font-size:13px;border-radius:2px;color:var(--fg)}
 .menu button:hover,.menu a:hover{background:rgba(255,255,255,.07)}
 .pick{display:flex;align-items:center;gap:12px;padding:10px;border-radius:2px;cursor:pointer;border:1px solid transparent;width:100%;background:none;text-align:left}
 .pick:hover{border-color:var(--line);background:rgba(255,255,255,.04)}
 @media (max-width:1100px){.wrap{padding:24px 20px}.nav{padding:0 20px;gap:16px}.tiles{grid-template-columns:repeat(3,1fr)}}
+
+/* ---------- theme switch (nav) ---------- */
+.theme-toggle{position:relative;width:54px;height:28px;border-radius:14px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);cursor:pointer;padding:0;flex:none;display:flex;align-items:center;justify-content:space-between;transition:background .25s,border-color .25s}
+.theme-toggle:focus-visible{outline:2px solid var(--amb);outline-offset:2px}
+.theme-ic{width:26px;text-align:center;font-size:12px;line-height:1;color:rgba(255,255,255,.75);position:relative;z-index:1}
+.theme-knob{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#f4f2ee;box-shadow:0 1px 4px rgba(0,0,0,.4);transition:transform .25s cubic-bezier(.3,1.3,.5,1);display:grid;place-items:center;font-size:12px;line-height:1;color:#1b2333;z-index:2}
+.theme-knob::after{content:"☾"}
+.theme-toggle.on .theme-knob::after{content:"☀";color:#b57a00}
+.theme-toggle.on{background:#ffb700;border-color:#ffb700}
+.theme-toggle.on .theme-knob{transform:translateX(26px);background:#fff}
+.theme-toggle.on .theme-ic{color:#003b95}
+
+/* ---------- light mode: Booking.com-style palette (white cards, navy header, blue actions, yellow highlights) ---------- */
+:root[data-theme="light"]{--ink:#f5f5f5;--fg:#1a1a1a;--mu:#474747;--mu2:#6b6b6b;--line:#e7e7e7;--glass:#fff;
+--g:linear-gradient(100deg,#006ce4,#003b95);--amb:#006ce4;--ok:#008234;--warn:#b57a00;--bad:#d4111e;color-scheme:light;
+--strong:#1a1a1a;--body2:#333;--okt:#008234;--badt:#c00;--surf:#f5f5f5;--sunk:#f5f5f5;--track:#e7e7e7;
+--okbg:#e7fde9;--okline:#8fd6a3;--ambbg:#ebf3ff;--ambline:#a6c8ff;--badline:#f6b2b6;
+--on-amb:#fff;--me-bg:#006ce4;--me-fg:#fff;--bubble:#f0f0f0;--ring:rgba(0,0,0,.35);--ring-a:#006ce4;--ring-b:#003b95;
+--sc1:#006ce4;--sc2:#003b95;--sc3:#ffb700}
+/* Illustrated heroes stay dark in both themes, so anything placed on them keeps the dark colours. */
+:root[data-theme="light"] .ph,:root[data-theme="light"] .on-dark{--fg:#f4f2ee;--mu:#d3d7de;--mu2:#b4b9c3;--amb:#ffb700;--strong:#fff;--okt:#8ff0c9;--badt:#ffb3c4;--line:rgba(255,255,255,.18);color:var(--fg)}
+[data-theme="light"] .aur,[data-theme="light"] .grain{display:none}
+[data-theme="light"] .nav{background:#003b95;border-bottom:0;backdrop-filter:none;color:#fff;--fg:#fff;--mu:rgba(255,255,255,.8);--mu2:rgba(255,255,255,.7)}
+[data-theme="light"] .nav .logo{color:#fff}
+[data-theme="light"] .nav .mark{border-color:#fff}
+[data-theme="light"] .nav .mark::after{background:#ffb700}
+[data-theme="light"] .nav a.nl{color:rgba(255,255,255,.78)}
+[data-theme="light"] .nav a.nl:hover,[data-theme="light"] .nav a.nl.on{color:#fff}
+[data-theme="light"] .nav a.nl.on::after{background:#ffb700;height:2px}
+[data-theme="light"] .nav .linkish{color:#fff}
+/* ...but dropdowns opened from the navy header are white panels, so they get the page's dark-on-light text back. */
+[data-theme="light"] .nav .menu,[data-theme="light"] .nav .notif{--fg:#1a1a1a;--mu:#474747;--mu2:#6b6b6b;color:var(--fg);background:#fff;border:1px solid #e7e7e7;box-shadow:0 12px 32px rgba(0,0,0,.16)}
+[data-theme="light"] .band{background:#003b95;border-bottom:0!important}
+[data-theme="light"] .band .in{border:2px solid #ffb700;background-color:#fff}
+[data-theme="light"] .band .err{color:#ffd0d3}
+[data-theme="light"] .gl{background:#fff;border:1px solid var(--line);box-shadow:0 2px 8px rgba(26,26,26,.08);backdrop-filter:none}
+[data-theme="light"] .gl.hi{background:#fff;border:2px solid #ffb700;box-shadow:0 2px 12px rgba(0,59,149,.12)}
+[data-theme="light"] .gl.hi::before{display:none}
+[data-theme="light"] .in{background-color:#fff;border-color:#868686}
+[data-theme="light"] .in:focus,[data-theme="light"] .in.f{border-color:#006ce4;box-shadow:0 0 0 3px rgba(0,108,228,.18)}
+[data-theme="light"] select.in option{background:#fff;color:#1a1a1a}
+[data-theme="light"] textarea.ta{color:var(--fg)}
+[data-theme="light"] .chip{color:#1a1a1a;background:#fff;border-color:#d4d4d4}
+[data-theme="light"] button.chip:hover{border-color:#006ce4}
+[data-theme="light"] .chip.on{background:#ebf3ff;border-color:#006ce4;color:#006ce4}
+[data-theme="light"] .chip.sh{background:#e7fde9;border-color:#8fd6a3;color:#008234}
+[data-theme="light"] .seg{background:#fff;border-color:#d4d4d4}
+[data-theme="light"] .seg button.on{background:#006ce4;color:#fff}
+[data-theme="light"] .btn{background:#fff;border-color:#006ce4;color:#006ce4}
+[data-theme="light"] .btn:hover{background:#f0f6ff;border-color:#006ce4}
+[data-theme="light"] .bp{background:#006ce4;color:#fff;box-shadow:none}
+[data-theme="light"] .bp:hover{background:#0057b8}
+[data-theme="light"] .bp::after{background:linear-gradient(100deg,transparent,rgba(255,255,255,.3),transparent)}
+[data-theme="light"] .bok{background:var(--ok);color:#fff;border:0}
+[data-theme="light"] .bno{color:#c00;border-color:#f6b2b6;background:#fff}
+[data-theme="light"] .bwarn{color:#8a5a00;border-color:#ffb700;background:#fff}
+[data-theme="light"] .bleave{color:#c00;border-color:#f6b2b6;background:#fff}
+[data-theme="light"] .bleave:hover{background:#ffebeb;border-color:#d4111e;color:#a50e19}
+[data-theme="light"] .bleave.solid{color:#fff;background:#d4111e;border-color:#d4111e}
+[data-theme="light"] .pg{background:#e7fde9;color:#008234}
+[data-theme="light"] .pb{background:#ebf3ff;color:#003b95}
+[data-theme="light"] .pa{background:#fff4d6;color:#8a5a00}
+[data-theme="light"] .pr{background:#ffebeb;color:#c00}
+[data-theme="light"] .pn{background:#f0f0f0;color:#474747}
+[data-theme="light"] .rule{border-bottom-color:#eee;color:#333}
+[data-theme="light"] .rule .v{color:#1a1a1a}
+[data-theme="light"] .tick{color:#fff}
+[data-theme="light"] .ring .t{stroke:#e7e7e7}
+[data-theme="light"] .ov{border-color:#008234;background:rgba(0,130,52,.06)}
+[data-theme="light"] .ov span{color:#008234}
+[data-theme="light"] .meter{background:#e7e7e7}
+[data-theme="light"] .divv{border-left-color:#e7e7e7}
+[data-theme="light"] code{background:#f0f0f0;color:#8a5a00}
+[data-theme="light"] .modal-bg{background:rgba(0,0,0,.45)}
+[data-theme="light"] .modal{background:#fff;border:1px solid #d4d4d4;box-shadow:0 12px 40px rgba(0,0,0,.2)}
+[data-theme="light"] .toast{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+[data-theme="light"] .notif,[data-theme="light"] .int-pop{background:#fff;border:1px solid #e7e7e7;box-shadow:0 12px 32px rgba(0,0,0,.16)}
+[data-theme="light"] .notif-item{color:#333}
+[data-theme="light"] .notif-item:hover,[data-theme="light"] .menu button:hover,[data-theme="light"] .menu a:hover,[data-theme="light"] .pick:hover{background:#f5f5f5}
+[data-theme="light"] .notif-item.unread{background:#ebf3ff}
+[data-theme="light"] .notif-req{background:#fff0f0}
+[data-theme="light"] .cost{background:#f0f6ff;border-color:#a6c8ff;border-left-color:#006ce4}
+[data-theme="light"] .cost-main{color:#333}
+[data-theme="light"] .cost-main b{color:#1a1a1a}
+[data-theme="light"] .cost-save{background:#e7fde9;color:#008234}
+[data-theme="light"] .cost-info{border-color:rgba(0,0,0,.3)}
+[data-theme="light"] .int-more{background:#ebf3ff}
+[data-theme="light"] .hint.ok{color:#008234}
+[data-theme="light"] .spin{border-color:rgba(0,0,0,.12);border-top-color:#006ce4}
+[data-theme="light"] .av{box-shadow:0 0 0 1.5px #fff}
+[data-theme="light"] .av.ghost{border-color:#868686;color:#6b6b6b;box-shadow:none}
+

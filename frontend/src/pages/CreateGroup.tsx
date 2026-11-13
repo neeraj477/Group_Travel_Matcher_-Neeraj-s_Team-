@@ -136,8 +136,8 @@ export default function CreateGroup() {
           </div>
         </div>
         {(errs.check_in || errs.check_out || errs.city) && (
-          <div className="gl" style={{ marginTop: 16, borderColor: "rgba(255,107,138,.35)" }}>
-            <h3 style={{ color: "#ffb3c4" }}>Fix before publishing</h3>
+          <div className="gl" style={{ marginTop: 16, borderColor: "var(--badline)" }}>
+            <h3 style={{ color: "var(--badt)" }}>Fix before publishing</h3>
             {[errs.city, errs.check_in, errs.check_out].filter(Boolean).map((m) => <div className="err" key={m}>{m}</div>)}
           </div>
         )}

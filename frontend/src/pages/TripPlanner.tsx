@@ -54,7 +54,7 @@ export default function TripPlanner({ g }: { g: GroupDetail }) {
               return (
                 <button key={d} type="button" className={"chip" + (d === current ? " on" : "")} onClick={() => setDay(d)} style={{ height: "auto", padding: "6px 10px", flexDirection: "column", alignItems: "flex-start", gap: 1, flex: "none" }}>
                   <span style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--mu2)" }}>Day {i + 1}{i === 0 ? " · arrive" : i === days.length - 1 ? " · depart" : ""}</span>
-                  <span>{dow(d)} {dShort(d)}{n ? <b style={{ marginLeft: 6, color: "#f0c48a" }}>{n}</b> : null}</span>
+                  <span>{dow(d)} {dShort(d)}{n ? <b style={{ marginLeft: 6, color: "var(--amb)" }}>{n}</b> : null}</span>
                 </button>
               );
             })}
@@ -64,7 +64,7 @@ export default function TripPlanner({ g }: { g: GroupDetail }) {
               {(perDay.get(current) ?? []).length === 0 && <div className="mu2" style={{ fontSize: 12.5, padding: "14px 0" }}>Nothing planned for {dow(current)} {dShort(current)} yet.</div>}
               {(perDay.get(current) ?? []).map((a) => (
                 <div key={a.id} className="row" style={{ alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
-                  <span className="num" style={{ width: 46, flex: "none", color: a.time ? "#f0c48a" : "var(--mu2)", fontSize: 12.5, paddingTop: 1 }}>{a.time ?? "Any time"}</span>
+                  <span className="num" style={{ width: 46, flex: "none", color: a.time ? "var(--amb)" : "var(--mu2)", fontSize: 12.5, paddingTop: 1 }}>{a.time ?? "Any time"}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13.5 }}>{a.body}</div>
                     <div className="mu2" style={{ fontSize: 11, marginTop: 2 }}>Added by {firstName(a.created_by?.name ?? "")}</div>
@@ -80,13 +80,13 @@ export default function TripPlanner({ g }: { g: GroupDetail }) {
         {/* ---------- to-dos ---------- */}
         <div>
           <div className="eyebrow" style={{ fontSize: 9.5 }}>Before we go</div>
-          {todos.length > 0 && <div className="meter" style={{ marginTop: 10 }}><i style={{ width: `${(doneCount / todos.length) * 100}%`, background: "#7fd6a8" }} /></div>}
+          {todos.length > 0 && <div className="meter" style={{ marginTop: 10 }}><i style={{ width: `${(doneCount / todos.length) * 100}%`, background: "var(--ok)" }} /></div>}
           <div style={{ marginTop: 8 }}>
             {todos.length === 0 && <div className="mu2" style={{ fontSize: 12.5, padding: "14px 0" }}>No to-dos yet. Try visas, travel insurance or airport transfer.</div>}
             {todos.map((t) => (
               <div key={t.id} className="row" style={{ gap: 10, padding: "9px 0", borderBottom: "1px solid var(--line)" }}>
                 <button type="button" aria-label={t.done ? "Mark as not done" : "Mark as done"} onClick={() => void toggle(t.id).catch(() => {})}
-                  className="tick" style={{ width: 20, height: 20, border: 0, cursor: "pointer", ...(t.done ? {} : { background: "transparent", boxShadow: "inset 0 0 0 1.5px rgba(255,255,255,.35)", color: "transparent" }) }}>✓</button>
+                  className="tick" style={{ width: 20, height: 20, border: 0, cursor: "pointer", ...(t.done ? {} : { background: "transparent", boxShadow: "inset 0 0 0 1.5px var(--ring)", color: "transparent" }) }}>✓</button>
                 <div style={{ flex: 1, minWidth: 0, fontSize: 13, textDecoration: t.done ? "line-through" : "none", color: t.done ? "var(--mu2)" : undefined }}>{t.body}</div>
                 {t.assignee && <span title={t.assignee.name} className="row" style={{ gap: 5, fontSize: 11.5, color: "var(--mu)" }}><Avatar id={t.assignee.id} name={t.assignee.name} size={20} />{firstName(t.assignee.name)}</span>}
                 <RemoveButton onClick={() => void remove(t.id).catch(() => {})} />

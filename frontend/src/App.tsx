@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { ago, api, session, type Me, type Meta, type Notification } from "./api";
-import { Avatar, Ctx, Loading, useApp } from "./ui";
+import { Avatar, Ctx, Loading, ThemeToggle, useApp } from "./ui";
 import SignUp from "./pages/SignUp";
 import CreateGroup from "./pages/CreateGroup";
 import FindGroups from "./pages/FindGroups";
@@ -36,7 +36,7 @@ export default function App() {
 
   return (
     <Ctx.Provider value={{ me, meta, refreshMe, setUser, toast }}>
-      <svg width="0" height="0" style={{ position: "absolute" }}><defs><linearGradient id="rg" x1="0" x2="1"><stop offset="0" stopColor="#f0c48a" /><stop offset="1" stopColor="#ffffff" /></linearGradient></defs></svg>
+      <svg width="0" height="0" style={{ position: "absolute" }}><defs><linearGradient id="rg" x1="0" x2="1"><stop offset="0" style={{ stopColor: "var(--ring-a)" }} /><stop offset="1" style={{ stopColor: "var(--ring-b)" }} /></linearGradient></defs></svg>
       <div className="app">
         <div className="aur"><i /><i /><i /></div><div className="grain" />
         {!ready ? <Loading /> : (
@@ -126,6 +126,7 @@ function Shell({ children, open }: { children: ReactNode; open?: boolean }) {
         <div className="sp" />
         {me ? (
           <>
+            <ThemeToggle />
             <Bell me={me} />
             <div style={{ position: "relative" }}>
               <button onClick={() => setMenu(!menu)} style={{ background: "none", border: 0, cursor: "pointer" }}><Avatar id={me.id} name={me.name} /></button>
@@ -139,7 +140,7 @@ function Shell({ children, open }: { children: ReactNode; open?: boolean }) {
               )}
             </div>
           </>
-        ) : <NavLink to="/welcome" className="nl">Sign up</NavLink>}
+        ) : <><ThemeToggle /><NavLink to="/welcome" className="nl">Sign up</NavLink></>}
       </div>
       {children}
     </>
