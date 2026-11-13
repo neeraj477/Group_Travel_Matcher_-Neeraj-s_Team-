@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { api, session, type Me, type Meta } from "./api";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { ago, api, session, type Me, type Meta, type Notification } from "./api";
 import { Avatar, Ctx, Loading, useApp } from "./ui";
 import SignUp from "./pages/SignUp";
 import CreateGroup from "./pages/CreateGroup";
@@ -58,6 +58,56 @@ export default function App() {
   );
 }
 
+/** 🔔 Badge = join requests waiting + unread notes. Opening the panel marks the notes read. */
+function Bell({ me }: { me: Me }) {
+  const { refreshMe } = useApp();
+  const loc = useLocation();
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<Notification[] | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const count = me.pending_requests + me.unread_notifications;
+  useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown); document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  async function toggle() {
+    if (open) return setOpen(false);
+    setOpen(true);
+    try {
+      setItems(await api<Notification[]>("/notifications"));
+      if (me.unread_notifications > 0) { await api("/notifications/read", { body: {} }); void refreshMe(); }
+    } catch { setItems([]); }
+  }
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button className="bell" title="Notifications" aria-label={`Notifications, ${count} new`} onClick={toggle}>🔔{count > 0 && <b>{count}</b>}</button>
+      {open && (
+        <div className="gl notif">
+          <div className="notif-head"><b>Notifications</b></div>
+          {me.pending_requests > 0 && (
+            <Link to="/my" className="notif-item notif-req">
+              <span className="notif-ic">✋</span>
+              <div><div>{me.pending_requests} join request{me.pending_requests > 1 ? "s" : ""} waiting for your answer</div><div className="mu2 notif-t">Review them from My groups →</div></div>
+            </Link>
+          )}
+          {items === null ? <div className="mu2 notif-empty">Loading…</div>
+            : items.length === 0 && me.pending_requests === 0 ? <div className="mu2 notif-empty">You're all caught up ✨</div>
+            : items.map((n) => (
+              <Link key={n.id} to={n.group ? `/groups/${n.group.id}` : "/my"} className={"notif-item" + (n.read ? "" : " unread")}>
+                <span className="notif-ic">👋</span>
+                <div><div>{n.body}</div><div className="mu2 notif-t">{ago(n.created_at)}</div></div>
+              </Link>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Page frame with the top nav. Pages need a profile unless `open`. */
 function Shell({ children, open }: { children: ReactNode; open?: boolean }) {
   const { me, setUser } = useApp();
@@ -76,7 +126,7 @@ function Shell({ children, open }: { children: ReactNode; open?: boolean }) {
         <div className="sp" />
         {me ? (
           <>
-            <button className="bell" title={`${me.pending_requests} join request(s) waiting`} onClick={() => nav("/my")}>🔔{me.pending_requests > 0 && <b>{me.pending_requests}</b>}</button>
+            <Bell me={me} />
             <div style={{ position: "relative" }}>
               <button onClick={() => setMenu(!menu)} style={{ background: "none", border: 0, cursor: "pointer" }}><Avatar id={me.id} name={me.name} /></button>
               {menu && (

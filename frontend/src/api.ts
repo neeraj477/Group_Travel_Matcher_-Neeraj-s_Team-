@@ -29,7 +29,11 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
 export type Gender = "FEMALE" | "MALE";
 export type GenderPref = "ANY" | "SAME_GENDER";
 export interface Profile { id: string; name: string; age: number | null; gender: Gender; home_city: string | null; interests: string[]; gender_preference: GenderPref }
-export interface Me extends Profile { home_airport: string | null; pending_requests: number }
+export interface Me extends Profile { home_airport: string | null; pending_requests: number; unread_notifications: number }
+export interface Notification {
+  id: number; kind: string; body: string; created_at: string; read: boolean;
+  group: { id: string; name: string } | null; actor: { id: string; name: string } | null;
+}
 export interface Interest { interest: string; label: string; category: string }
 export interface City { name: string; country: string; country_code: string; timezone: string }
 export interface Meta {
@@ -47,8 +51,14 @@ export interface Booking {
   room: { room_id: string; name: string; max_adults: number }; rooms: number; nights: string[]; total_inr: number;
   created_at: string; booked_by: string; shares: { traveller_id: string; amount_paise: number; name: string }[];
 }
-export interface GroupDetail extends GroupSummary { pending_count: number; my_request: string | null; booking: Booking | null }
-export interface Match extends GroupSummary { rules: RuleResult[]; my_request: string | null; shared_interests: string[]; shared_nights: number; score: number }
+/** Cheapest stay for the group's city and dates at a given group size (priced by the backend). */
+export interface StayQuote { guests: number; hotel_id: string; hotel_name: string; room_id: string; room_name: string; rooms: number; total_inr: number; per_member_inr: number }
+export interface CostPreview {
+  nights: number; now: StayQuote | null; if_join: StayQuote | null;
+  saving_per_member_inr: number | null; budget_share_pct: number | null; reason: string | null;
+}
+export interface GroupDetail extends GroupSummary { pending_count: number; my_request: string | null; booking: Booking | null; cost_preview: CostPreview | null }
+export interface Match extends GroupSummary { rules: RuleResult[]; my_request: string | null; shared_interests: string[]; shared_nights: number; score: number; cost_preview: CostPreview }
 export interface NearMiss extends GroupSummary { rules: RuleResult[]; failed: RuleResult; fix: { label: string; patch: Partial<SearchInput> }; shared_interests: string[]; shared_nights: number; my_request: string | null }
 export interface SearchInput { home_city?: string; city: string; check_in: string; check_out: string; budget_inr: number; interests: string[]; gender_preference: GenderPref }
 export interface SearchResponse { search_id: number; search: SearchInput & { gender: Gender }; total_matches: number; results: Match[]; near_misses: NearMiss[] }

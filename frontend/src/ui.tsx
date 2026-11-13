@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { initials, type Interest, type Me, type Meta, type RuleResult } from "./api";
+import { initials, inr, range, type CostPreview, type Interest, type Me, type Meta, type RuleResult } from "./api";
 import { scene } from "./scenes";
 
 // ---------- app-wide context ----------
@@ -67,6 +67,27 @@ export function InterestChips({ value, onChange, interests, highlight }: { value
           </button>
         );
       })}
+    </div>
+  );
+}
+
+const COST_INFO = "Based on the cheapest room setup with free rooms on every night of the group's dates. Final hotel is chosen together on the group page.";
+
+/** "Your seat makes it cheaper": the group's stay cost per person now vs. if you join. All numbers come from the API. */
+export function CostStrip({ p, checkIn, checkOut }: { p: CostPreview; checkIn: string; checkOut: string }) {
+  const { now, if_join: join, saving_per_member_inr: saving, budget_share_pct: pct } = p;
+  return (
+    <div className="cost">
+      <div className="cost-main">
+        {now && <span>Stay now <b>{inr(now.per_member_inr)} each</b> <span className="mu2">({now.guests} member{now.guests > 1 ? "s" : ""})</span></span>}
+        {now && join && <span className="cost-arr">→</span>}
+        {join && <span><b className="cost-amb">{inr(join.per_member_inr)} each</b> if you join</span>}
+        {join && saving !== null && saving > 0 && <span className="cost-save">saves {inr(saving)}</span>}
+        {join && pct !== null && <span className="mu2">{pct}% of your budget</span>}
+        {!join && <span className="mu2">{p.reason}</span>}
+        <span className="cost-info" title={COST_INFO} aria-label={COST_INFO} tabIndex={0}>i</span>
+      </div>
+      {join && <div className="cost-sub">Cheapest stay for {range(checkIn, checkOut)}: {join.hotel_name}, {join.rooms} × {join.room_name}</div>}
     </div>
   );
 }

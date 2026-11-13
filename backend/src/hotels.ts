@@ -1,40 +1,23 @@
 // Common Group Page (M6): hotel options for a group's city and dates, priced for the group.
-import { availability, hotels, rooms, type Hotel, type Room } from "./catalog";
+// The pricing maths itself lives in pricing.ts (pure, shared with the search cost preview).
+import { hotels, rooms, type Hotel, type Room } from "./catalog";
 import { db, type Group } from "./db";
-import { fmtShort, nightList } from "./rules";
+import { quoteRoom, type RoomOption } from "./pricing";
+import { fmtShort } from "./rules";
+
+export type { RoomOption } from "./pricing";
 
 /** Rooms our own bookings already took, per room type and night (the catalog files stay untouched). */
-function bookedRooms(): Map<string, number> {
+export function bookedRooms(): Map<string, number> {
   const m = new Map<string, number>();
   for (const b of db.prepare("SELECT room_id, rooms, nights FROM bookings").all() as any[])
     for (const n of JSON.parse(b.nights) as string[]) m.set(`${b.room_id}|${n}`, (m.get(`${b.room_id}|${n}`) ?? 0) + b.rooms);
   return m;
 }
 
-export interface RoomOption {
-  room_id: string; room_name: string; room_type: string; max_adults: number; price_per_night: number;
-  refundable: boolean; rooms_needed: number; nights: number; total_inr: number; per_member_inr: number;
-  available: boolean; min_rooms_left: number; full_on: string | null;
-}
-
+/** Price one room type for the group as it is now (its city, dates and member count). */
 export function priceRoom(room: Room, group: Group, booked = bookedRooms()): RoomOption {
-  const members = group.member_ids.length;
-  const nights = nightList(group.check_in, group.check_out);
-  const roomsNeeded = Math.ceil(members / room.max_adults);
-  let minLeft = Infinity;
-  let fullOn: string | null = null;
-  for (const n of nights) {
-    const left = (availability.get(room.room_id)?.get(n) ?? 0) - (booked.get(`${room.room_id}|${n}`) ?? 0);
-    minLeft = Math.min(minLeft, left);
-    if (left < roomsNeeded && !fullOn) fullOn = n;
-  }
-  const total = room.price_per_night.amount * roomsNeeded * nights.length;
-  return {
-    room_id: room.room_id, room_name: room.name, room_type: room.room_type, max_adults: room.max_adults,
-    price_per_night: room.price_per_night.amount, refundable: room.refundable, rooms_needed: roomsNeeded,
-    nights: nights.length, total_inr: total, per_member_inr: total / members,
-    available: fullOn === null, min_rooms_left: Math.max(0, minLeft), full_on: fullOn,
-  };
+  return quoteRoom(room, group.check_in, group.check_out, group.member_ids.length, booked);
 }
 
 export interface HotelResult {

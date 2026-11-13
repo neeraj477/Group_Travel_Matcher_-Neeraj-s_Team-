@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, ApiError, dayNum, firstName, inr, nightsOf, range, type GenderPref, type Match, type NearMiss, type SearchInput, type SearchResponse } from "../api";
 import { cityScene } from "../scenes";
-import { Avatar, Field, InterestChips, Loading, Ring, Rules, Scene, useApp, useInterestLabel } from "../ui";
+import { Avatar, CostStrip, Field, InterestChips, Loading, Ring, Rules, Scene, useApp, useInterestLabel } from "../ui";
 import { splitName } from "./CreateGroup";
 
 const LAST = "tripmate.lastSearch";
@@ -28,6 +28,16 @@ export default function FindGroups() {
   const [err, setErr] = useState<{ field?: string; msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [intOpen, setIntOpen] = useState(false);
+  const intRef = useRef<HTMLDivElement>(null);
+  // Close the interests popover on an outside click or Escape.
+  useEffect(() => {
+    if (!intOpen) return;
+    const onDown = (e: MouseEvent) => { if (!intRef.current?.contains(e.target as Node)) setIntOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIntOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [intOpen]);
 
   async function run(input: SearchInput, opts: { filterInts?: string[]; mix?: string; sort?: string } = {}) {
     setBusy(true); setErr(null);
@@ -89,14 +99,32 @@ export default function FindGroups() {
           <select className="in" style={{ flex: 1 }} value={form.gender_preference} onChange={(e) => setForm({ ...form, gender_preference: e.target.value as GenderPref })} title="Travel with">
             <option value="SAME_GENDER">{sameLabel}</option><option value="ANY">Anyone</option>
           </select>
-          <div style={{ flex: 1.5, position: "relative" }}>
-            <button type="button" className="in" onClick={() => setIntOpen(!intOpen)} style={{ cursor: "pointer", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }} title="Interests">
-              {form.interests.length ? form.interests.map(label).join(" · ") : <span className="mu2">Interests…</span>}
+          <div ref={intRef} style={{ flex: 1.5, minWidth: 0, position: "relative" }}>
+            <button type="button" className={"in int-trigger" + (intOpen ? " f" : "")} onClick={() => setIntOpen(!intOpen)} title={form.interests.map(label).join(", ") || "Interests"} aria-expanded={intOpen}>
+              {form.interests.length === 0 ? <span className="mu2">✦ Interests…</span> : (
+                <>
+                  <span className="int-more">{form.interests.length}</span>
+                  <span className="int-text">{form.interests.map(label).join(", ")}</span>
+                </>
+              )}
+              <span className="r">{intOpen ? "▴" : "▾"}</span>
             </button>
             {intOpen && (
-              <div className="gl pop-list" style={{ width: 420, left: "auto" }}>
+              <div className="int-pop" role="dialog" aria-label="Choose interests">
+                <div className="int-head">
+                  <div><b>Interests</b><span className="mu2"> · {form.interests.length} selected</span></div>
+                  <div className="row" style={{ gap: 6 }}>
+                    <button type="button" className="lnk" onClick={() => setForm({ ...form, interests: me.interests })}>Use my profile</button>
+                    <button type="button" className="lnk" disabled={!form.interests.length} onClick={() => setForm({ ...form, interests: [] })}>Clear</button>
+                  </div>
+                </div>
                 <InterestChips value={form.interests} onChange={(v) => setForm({ ...form, interests: v })} interests={meta.interests} />
-                <div className="row" style={{ marginTop: 12, justifyContent: "space-between" }}><span className="hint" style={{ margin: 0 }}>Groups need 2+ shared with the owner</span><button type="button" className="btn sm" onClick={() => setIntOpen(false)}>Done</button></div>
+                <div className="int-foot">
+                  <span className={"hint" + (form.interests.length >= 2 ? " ok" : "")} style={{ margin: 0 }}>
+                    {form.interests.length >= 2 ? "✓ " : ""}Groups need 2+ interests shared with the owner
+                  </span>
+                  <button type="button" className="btn sm bp" onClick={() => setIntOpen(false)}>Done</button>
+                </div>
               </div>
             )}
           </div>
@@ -217,6 +245,7 @@ function MatchCard({ m, i, best, search, searchId, onRequested }: { m: Match; i:
           <div className="bar" style={{ top: 0, ...pos(search.check_in, search.check_out), background: "linear-gradient(90deg,#4f6d8a,#7d97b0)" }}>You · {range(search.check_in, search.check_out)}</div>
           <div className="bar" style={{ top: 23, ...pos(m.check_in, m.check_out), background: "linear-gradient(90deg,#c27d45,#f0c48a)", animationDelay: ".6s" }}>Group · {range(m.check_in, m.check_out)}</div>
         </div>
+        {m.cost_preview && <CostStrip p={m.cost_preview} checkIn={m.check_in} checkOut={m.check_out} />}
         {m.itinerary && <div className="mu2" style={{ fontSize: 12, marginTop: 14 }}>{m.itinerary}</div>}
         <div className="row" style={{ marginTop: 14 }}>
           {m.my_request === "PENDING" ? <span className="pill pa">✓ Request sent · waiting for owner</span>

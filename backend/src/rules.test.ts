@@ -1,3 +1,4 @@
+import "./test-env"; // must stay first: tests never touch the real app.db
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { seedGroups, seedTravellers } from "./catalog";

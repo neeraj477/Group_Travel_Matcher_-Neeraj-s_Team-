@@ -5,7 +5,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/rules.test.ts"
+    "test": "tsx --test src/rules.test.ts src/pricing.test.ts"
   },
   "author": "",
   "license": "ISC",

@@ -7,7 +7,8 @@ import {
   evaluate, score, suggestFix, validateInterests, validateTrip, ValidationError, nightList, nightsBetween,
   sharedNights, budgetRange, WINDOW_START, WINDOW_END, type SeekerSearch,
 } from "./rules";
-import { hotelOptions, priceRoom, splitShares } from "./hotels";
+import { bookedRooms, hotelOptions, priceRoom, splitShares } from "./hotels";
+import { costPreview, type QuoteCache } from "./pricing";
 
 const app = express();
 app.use(cors());
@@ -93,7 +94,23 @@ app.get("/api/travellers/:id", wrap((req) => {
 app.get("/api/me", wrap((req) => {
   const t = me(req);
   const pending = (db.prepare(`SELECT COUNT(*) n FROM join_requests r JOIN groups g ON g.id = r.group_id WHERE g.owner_id = ? AND r.status = 'PENDING'`).get(t.id) as { n: number }).n;
-  return { ...profile(t), home_airport: t.home_airport, pending_requests: pending };
+  const unread = (db.prepare("SELECT COUNT(*) n FROM notifications WHERE traveller_id = ? AND read_at IS NULL").get(t.id) as { n: number }).n;
+  return { ...profile(t), home_airport: t.home_airport, pending_requests: pending, unread_notifications: unread };
+}));
+
+// ---------- bell notifications ----------
+app.get("/api/notifications", wrap((req) => {
+  const t = me(req);
+  return (db.prepare("SELECT * FROM notifications WHERE traveller_id = ? ORDER BY id DESC LIMIT 20").all(t.id) as any[]).map((n) => ({
+    id: n.id, kind: n.kind, body: n.body, created_at: n.created_at, read: n.read_at !== null,
+    group: n.group_id ? { id: n.group_id, name: getGroup(n.group_id)?.name ?? n.group_id } : null,
+    actor: n.actor_id ? { id: n.actor_id, name: getTraveller(n.actor_id)?.name ?? n.actor_id } : null,
+  }));
+}));
+app.post("/api/notifications/read", wrap((req) => {
+  const t = me(req);
+  db.prepare("UPDATE notifications SET read_at = datetime('now') WHERE traveller_id = ? AND read_at IS NULL").run(t.id);
+  return { ok: true };
 }));
 
 // ---------- group posts (M2) ----------
@@ -121,11 +138,17 @@ app.get("/api/groups/:id", wrap((req) => {
   const g = groupOr404(String(req.params.id));
   const myReq = viewer ? db.prepare("SELECT status FROM join_requests WHERE group_id = ? AND seeker_id = ? ORDER BY id DESC").get(g.id, viewer.id) as any : undefined;
   const booking = getBooking(g.id);
+  // Cost preview for people looking at a group they could join. Budget % uses their own search, if given.
+  const canJoin = !booking && g.member_ids.length < g.max_size && !(viewer && g.member_ids.includes(viewer.id));
+  const sr = viewer && req.query.search_id
+    ? db.prepare("SELECT budget_inr FROM searches WHERE id = ? AND traveller_id = ?").get(Number(req.query.search_id), viewer.id) as { budget_inr: number } | undefined
+    : undefined;
   return {
     ...groupSummary(g, viewer),
     pending_count: viewer && g.owner_id === viewer.id ? pendingCount(g.id) : 0,
     my_request: myReq?.status ?? null,
     booking: booking ? bookingView(booking) : null,
+    cost_preview: canJoin ? costPreview(g, sr?.budget_inr ?? 0, bookedRooms()) : null,
   };
 }));
 
@@ -142,6 +165,9 @@ app.post("/api/search", wrap((req) => {
 
   const matches: any[] = [];
   const nearMisses: any[] = [];
+  // Cost preview (display only): bookings read once, quotes cached per city/dates/guests for this request.
+  const booked = bookedRooms();
+  const quotes: QuoteCache = new Map();
   for (const g of listGroups()) {
     if (g.member_ids.includes(t.id) || getBooking(g.id)) continue; // own groups and booked (locked) groups are not open
     const owner = getTraveller(g.owner_id)!;
@@ -153,7 +179,7 @@ app.post("/api/search", wrap((req) => {
       shared_interests: s.interests.filter((i) => owner.interests.includes(i)),
       shared_nights: sharedNights(s.check_in, s.check_out, g.check_in, g.check_out),
     };
-    if (failed.length === 0) matches.push({ ...base, score: score(s, g, owner) });
+    if (failed.length === 0) matches.push({ ...base, score: score(s, g, owner), cost_preview: costPreview(g, s.budget_inr, booked, quotes) });
     else if (failed.length === 1) {
       const fix = suggestFix(failed[0], s, g, owner);
       if (fix) nearMisses.push({ ...base, failed: failed[0], fix });
@@ -232,6 +258,39 @@ function decide(req: Request, approve: boolean) {
 app.post("/api/requests/:id/approve", wrap((req) => decide(req, true)));
 app.post("/api/requests/:id/reject", wrap((req) => decide(req, false)));
 
+// A member steps back from a group. Not the owner (the group would have no owner). Their old saves stay in
+// saved_options (booking-service owns that table) but are hidden, because saves and budgets are read for
+// current members only.
+app.post("/api/groups/:id/leave", wrap((req) => {
+  const t = me(req);
+  const g = groupOr404(String(req.params.id));
+  requireMember(g, t);
+  if (g.owner_id === t.id) throw new HttpError(409, "You created this group, so you can't leave it. Your members are counting on you!");
+  // After booking a member may still leave, but the booking row is booking-service's (CONTRACT.md), so it stays
+  // exactly as booked: same room, total and shares. The leaver's share stays on it; the group settles it in chat.
+  const booking = getBooking(g.id);
+  const share = booking?.shares.find((s: any) => s.traveller_id === t.id)?.amount_paise as number | undefined;
+  const shareText = share !== undefined ? `₹${(share / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "their share";
+  const hotelName = booking ? hotelById.get(booking.hotel_id)?.name ?? "your hotel" : "";
+  const first = t.name.split(" ")[0];
+  db.transaction(() => {
+    const pos = (db.prepare("SELECT position FROM group_members WHERE group_id = ? AND traveller_id = ?").get(g.id, t.id) as { position: number }).position;
+    db.prepare("DELETE FROM group_members WHERE group_id = ? AND traveller_id = ?").run(g.id, t.id);
+    // keep positions 0..n-1 so join order (and the paise split order) stays well defined
+    db.prepare("UPDATE group_members SET position = position - 1 WHERE group_id = ? AND position > ?").run(g.id, pos);
+    const note = db.prepare("INSERT INTO notifications (traveller_id, kind, group_id, actor_id, body) VALUES (?, 'MEMBER_LEFT', ?, ?, ?)");
+    for (const id of g.member_ids.filter((m) => m !== t.id)) {
+      const body = booking
+        ? `${first} has stepped back from “${g.name}”. No hard feelings — your stay at ${hotelName} is still booked. ${first}'s share (${shareText}) is still on the booking, so have a quick chat about settling up. 🌿`
+        : id === g.owner_id
+        ? `${first} has stepped back from “${g.name}”. No hard feelings — their spot is open again, and new join requests will show up right here. 🌿`
+        : `${first} has stepped back from “${g.name}”. No hard feelings — the trip's still on, and their spot is open for a new travel buddy. 🌿`;
+      note.run(id, g.id, t.id, body);
+    }
+  })();
+  return { left: true, group: { id: g.id, name: g.name } };
+}));
+
 app.get("/api/me/groups", wrap((req) => {
   const t = me(req);
   const mine = listGroups().filter((g) => g.member_ids.includes(t.id)).map((g) => ({ ...groupSummary(g, t), pending_count: g.owner_id === t.id ? pendingCount(g.id) : 0 }));
@@ -242,12 +301,16 @@ app.get("/api/me/groups", wrap((req) => {
 
 // ---------- Common Group Page (M6) ----------
 function memberBudgets(g: Group): number[] {
-  const rows = db.prepare(`SELECT s.budget_inr FROM join_requests r JOIN searches s ON s.id = r.search_id WHERE r.group_id = ? AND r.status = 'APPROVED'`).all(g.id) as any[];
+  // current members only: someone who left keeps their APPROVED request row but no longer counts
+  const rows = db.prepare(`SELECT s.budget_inr FROM join_requests r JOIN searches s ON s.id = r.search_id
+    WHERE r.group_id = ? AND r.status = 'APPROVED' AND r.seeker_id IN (SELECT traveller_id FROM group_members WHERE group_id = r.group_id)`).all(g.id) as any[];
   return [g.budget_inr, ...rows.map((r) => r.budget_inr)];
 }
 function savesFor(groupId: string) {
   const out: Record<string, string[]> = {};
-  for (const r of db.prepare("SELECT room_id, traveller_id FROM saved_options WHERE group_id = ? ORDER BY created_at").all(groupId) as any[])
+  // saves of members who left stay in the table but are not shown
+  for (const r of db.prepare(`SELECT room_id, traveller_id FROM saved_options WHERE group_id = ?
+    AND traveller_id IN (SELECT traveller_id FROM group_members WHERE group_id = ?) ORDER BY created_at`).all(groupId, groupId) as any[])
     (out[r.room_id] ??= []).push(r.traveller_id);
   return out;
 }

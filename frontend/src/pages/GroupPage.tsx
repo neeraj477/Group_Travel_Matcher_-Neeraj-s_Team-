@@ -1,11 +1,11 @@
 // Screen 05 · Common Group Page (M6) and 06 · Book → confirm → locked. Non-members see the public group view.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   api, dLong, firstName, inr, paise, range, type Booking, type GroupDetail, type HotelResult, type HotelsResponse, type Message, type RoomOption,
 } from "../api";
 import { cityScene, hotelScenes } from "../scenes";
-import { Avatar, Confetti, CountUp, Loading, Modal, Scene, useApp, useInterestLabel } from "../ui";
+import { Avatar, Confetti, CostStrip, CountUp, Loading, Modal, Scene, useApp, useInterestLabel } from "../ui";
 import { splitName } from "./CreateGroup";
 import { lastSearch } from "./FindGroups";
 
@@ -14,7 +14,11 @@ export default function GroupPage() {
   const { me } = useApp();
   const [g, setG] = useState<GroupDetail | null>(null);
   const [err, setErr] = useState("");
-  const load = useCallback(() => api<GroupDetail>(`/groups/${id}`).then(setG).catch((e) => setErr(e.message)), [id]);
+  // search_id lets the backend show the cost preview as a share of the viewer's own budget
+  const load = useCallback(() => {
+    const sid = lastSearch.get()?.search_id;
+    return api<GroupDetail>(`/groups/${id}${sid ? `?search_id=${sid}` : ""}`).then(setG).catch((e) => setErr(e.message));
+  }, [id]);
   useEffect(() => { void load(); }, [load, me?.id]);
   if (err) return <div className="wrap"><div className="gl empty"><h2>{err}</h2><Link to="/find" className="btn" style={{ marginTop: 16 }}>Find groups</Link></div></div>;
   if (!g) return <Loading />;
@@ -54,6 +58,7 @@ function PublicGroup({ g, reload }: { g: GroupDetail; reload: () => void }) {
             <div><div className="lbl">Group size</div>{g.members.length} of {g.max_size} (owner included)</div>
             <div><div className="lbl">Owner travels with</div>{g.owner.gender_preference === "SAME_GENDER" ? (g.owner.gender === "FEMALE" ? "Women only" : "Men only") : "Anyone"}</div>
           </div>
+          {g.cost_preview && <><div className="lbl" style={{ marginTop: 22 }}>Stay cost per person</div><CostStrip p={g.cost_preview} checkIn={g.check_in} checkOut={g.check_out} /></>}
           <div className="lbl" style={{ marginTop: 22 }}>Owner's interests · you need 2+ in common</div>
           <div className="chips">{g.owner.interests.map((i) => <span key={i} className={"chip" + (last?.input.interests.includes(i) ? " sh" : "")}>{label(i)}</span>)}</div>
         </div>
@@ -82,7 +87,24 @@ function PublicGroup({ g, reload }: { g: GroupDetail; reload: () => void }) {
 
 // ---------------------------------------------------------------- the common group page
 function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
-  const { me, toast } = useApp();
+  const { me, toast, refreshMe } = useApp();
+  const nav = useNavigate();
+  const [leaving, setLeaving] = useState<"ask" | "busy" | "locked" | null>(null);
+  function openChat() {
+    setLeaving(null);
+    const el = document.getElementById("group-chat-input");
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => el?.focus(), 400);
+  }
+  async function leave() {
+    setLeaving("busy");
+    try {
+      await api(`/groups/${g.id}/leave`, { body: {} });
+      toast(`You've left “${g.name}”. Hope to see you on another trip soon! 👋`);
+      void refreshMe();
+      nav("/my");
+    } catch (e) { toast((e as Error).message, true); setLeaving(null); }
+  }
   const [h, setH] = useState<HotelsResponse | null>(null);
   const [sort, setSort] = useState("per_person");
   const [budgetOnly, setBudgetOnly] = useState(false);
@@ -105,6 +127,7 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
     .sort((a, b) => b.who.length - a.who.length || a.opt.per_member_inr - b.opt.per_member_inr), [h, byRoom]);
   const choice = saved.find((s) => s.room === selected) ?? saved[0];
   const booking = h?.booking ?? g.booking;
+  const myShare = booking?.shares.find((s) => s.traveller_id === me?.id)?.amount_paise;
 
   async function toggleSave(room: string) {
     try { const r = await api<{ saves: Record<string, string[]> }>(`/groups/${g.id}/saved`, { body: { room_id: room } }); setH((x) => (x ? { ...x, saves: r.saves } : x)); }
@@ -158,7 +181,7 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
         </div>
 
         <div>
-          {booking && <BookedBanner b={booking} onOpen={() => setBooked({ b: booking, fresh: false })} />}
+          {booking && <BookedBanner b={booking} onOpen={() => setBooked({ b: booking, fresh: false })} onLeave={g.is_owner ? undefined : () => setLeaving("locked")} />}
           <div className="row" style={{ justifyContent: "space-between", margin: "4px 0 12px", flexWrap: "wrap" }}>
             <h2>Stays for <em>your group</em></h2>
             <div className="row" style={{ gap: 6 }}>
@@ -199,8 +222,45 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
             {!booking && <button className="btn bp" style={{ width: "100%", marginTop: 14, height: 44 }} disabled={!choice || !choice.opt.available} onClick={() => choice && setConfirm({ hotel: choice.hotel, opt: choice.opt })}>Finalise booking for the group</button>}
           </div>
           <Chat groupId={g.id} meId={me!.id} members={g.members.map((m) => ({ id: m.id, name: m.name }))} />
+          {!g.is_owner && !booking && (
+            <button className="btn bleave" style={{ width: "100%", marginTop: 16 }} onClick={() => setLeaving("ask")}>Leave group</button>
+          )}
         </div>
       </div>
+
+      {booking && (leaving === "locked" || leaving === "busy") && (
+        <Modal onClose={() => leaving === "locked" && setLeaving(null)} width={460}>
+          <div style={{ padding: "26px 28px" }}>
+            <div className="eyebrow" style={{ color: "#ff9fb3" }}>Leave group</div>
+            <h2 style={{ marginTop: 8 }}>Your stay is locked 🔒</h2>
+            <p className="mu" style={{ marginTop: 10, lineHeight: 1.6, fontSize: 13.5 }}>
+              The stay at <b style={{ color: "#fff", fontWeight: 600 }}>{booking.hotel.name}</b> is already booked for the group, and the booking won't change if you leave.
+              {myShare !== undefined && <> Your share (<b style={{ color: "#fff", fontWeight: 600 }}>{paise(myShare)}</b>) stays on it, so please settle it with your group.</>}
+              {" "}{firstName(g.owner.name)} will get a friendly note that you've left.
+            </p>
+            <div className="row" style={{ marginTop: 22 }}>
+              <button className="btn bleave solid" style={{ flex: 1 }} disabled={leaving === "busy"} onClick={leave}>{leaving === "busy" ? "Leaving…" : "Confirm leave"}</button>
+              <button className="btn bp" style={{ flex: 1 }} disabled={leaving === "busy"} onClick={openChat}>Open group chat</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {!booking && (leaving === "ask" || leaving === "busy") && (
+        <Modal onClose={() => leaving === "ask" && setLeaving(null)} width={460}>
+          <div style={{ padding: "26px 28px" }}>
+            <div className="eyebrow" style={{ color: "#ff9fb3" }}>Leave group</div>
+            <h2 style={{ marginTop: 8 }}>Step back from this trip?</h2>
+            <p className="mu" style={{ marginTop: 10, lineHeight: 1.6, fontSize: 13.5 }}>
+              You'll leave <b style={{ color: "#fff", fontWeight: 600 }}>{g.name}</b>. Your groupmates will get a friendly note, and your spot opens up for a new traveller.
+              Changed your mind later? You can ask to join again while there's space.
+            </p>
+            <div className="row" style={{ marginTop: 22 }}>
+              <button className="btn" style={{ flex: 1 }} disabled={leaving === "busy"} onClick={() => setLeaving(null)}>Stay in group</button>
+              <button className="btn bleave solid" style={{ flex: 1 }} disabled={leaving === "busy"} onClick={leave}>{leaving === "busy" ? "Leaving…" : "Yes, leave group"}</button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {confirm && (
         <Modal onClose={() => setConfirm(null)}>
@@ -316,11 +376,12 @@ function MapCard({ hotels, all, city, saves, guests }: { hotels: HotelResult[]; 
   );
 }
 
-function BookedBanner({ b, onOpen }: { b: Booking; onOpen: () => void }) {
+function BookedBanner({ b, onOpen, onLeave }: { b: Booking; onOpen: () => void; onLeave?: () => void }) {
   return (
     <div className="gl hi rise" style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 16, borderColor: "rgba(62,230,168,.55)" }}>
       <span className="tick" style={{ width: 28, height: 28, fontSize: 13 }}>✓</span>
       <div style={{ flex: 1 }}><b style={{ fontWeight: 600 }}>Booked: {b.hotel.name}</b><div className="mu" style={{ fontSize: 12.5 }}>{b.rooms} × {b.room.name} · {b.id} · total {inr(b.total_inr)} · locked</div></div>
+      {onLeave && <button className="btn sm bleave" onClick={onLeave}>Leave group</button>}
       <button className="btn sm bp" onClick={onOpen}>View booking</button>
     </div>
   );
@@ -354,7 +415,8 @@ function BookedModal({ b, g, fresh, onClose }: { b: Booking; g: GroupDetail; fre
           <div className="eyebrow" style={{ marginTop: 18 }}>Each person pays</div>
           {b.shares.map((s, i) => (
             <div className="row" style={{ justifyContent: "space-between", marginTop: i ? 8 : 10 }} key={s.traveller_id}>
-              <div className="row"><Avatar id={s.traveller_id} name={s.name} size={26} />{firstName(s.name)}</div>
+              <div className="row"><Avatar id={s.traveller_id} name={s.name} size={26} />{firstName(s.name)}
+                {!g.members.some((m) => m.id === s.traveller_id) && <span className="pill pr" title="Left the group after booking. Their share is still on the booking.">left the group</span>}</div>
               <b className="num" style={{ fontWeight: 600 }}><CountUp value={s.amount_paise} format={(v) => paise(Math.round(v))} /></b>
             </div>
           ))}
@@ -393,7 +455,7 @@ function Chat({ groupId, meId, members }: { groupId: string; meId: string; membe
           </div>
         ))}
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); void send(); }}><input className="in" style={{ marginTop: 10 }} placeholder="Message the group…" value={text} onChange={(e) => setText(e.target.value)} maxLength={1000} /></form>
+      <form onSubmit={(e) => { e.preventDefault(); void send(); }}><input id="group-chat-input" className="in" style={{ marginTop: 10 }} placeholder="Message the group…" value={text} onChange={(e) => setText(e.target.value)} maxLength={1000} /></form>
     </div>
   );
 }

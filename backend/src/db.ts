@@ -55,6 +55,12 @@ CREATE TABLE IF NOT EXISTS messages (
   traveller_id TEXT NOT NULL REFERENCES travellers(id), body TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+-- Bell notifications (e.g. "a groupmate left"). traveller_id is the recipient, actor_id who caused it.
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, traveller_id TEXT NOT NULL REFERENCES travellers(id),
+  kind TEXT NOT NULL, group_id TEXT REFERENCES groups(id), actor_id TEXT REFERENCES travellers(id),
+  body TEXT NOT NULL, read_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `);
 
 const count = (db.prepare("SELECT COUNT(*) n FROM travellers").get() as { n: number }).n;

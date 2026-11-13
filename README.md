@@ -72,6 +72,14 @@ Groups the seeker is already in, and groups that have already booked (locked), a
 - The booking split is calculated in paise, with any leftover paisa going to the first members, so the shares always add up to the total.
 - Example from the data dictionary: G-01 with 2 members in the Gion Corner Twin Room costs ₹23,800 in total, ₹11,900 each.
 
+### Cost preview: "your seat makes it cheaper" (backend/src/pricing.ts)
+Each match in the search results, and the group page for people who aren't members yet, shows the group's cheapest stay per person **now** and **if you join**. For example, G-01 is ₹18,480 each with 1 member and ₹11,900 each with 2, so joining saves ₹6,580 and costs 19.2% of Priya's budget.
+- **What it computes:** for each group size (members, and members + 1), the room type with the lowest per-person cost that has enough free rooms on **every** night. The two sizes may land in different hotels (a single for one person, a twin for two). When joining makes it dearer (2 → 3 people needs a triple or a second room), the saving is shown as no saving, never faked.
+- **Why the group's dates:** you'd be joining the group's stay, so it's priced for the group's city and check-in → check-out, not your search dates.
+- **One pricing function:** `quoteRoom` and `cheapestStay` in `pricing.ts` are the same maths the Common Group Page uses (`hotels.ts` calls them), so the "if you join" price always equals the cheapest price on the group page for that group size. Our own bookings are subtracted from availability, just as on the group page.
+- **Rounding:** `per_member_inr` is `total ÷ guests`, unrounded, exactly as `/hotels` returns it (CONTRACT.md). The saving is rounded to paise, the budget share to 1 decimal place, and the screen rounds to whole rupees. The actual booking still splits the total in paise.
+- **Display only:** it never changes the 6 rules, the score or the ranking.
+
 ## What's finished
 
 | ID | Feature | Status |
@@ -85,6 +93,7 @@ Groups the seeker is already in, and groups that have already booked (locked), a
 | G1 | Filter results by shared interests and group mix (all women / all men / mixed), plus sort | ✅ |
 | G2 | Member profile pages: interests, home city, age and groups | ✅ |
 | S1 | Group chat on the group page (polling) | ✅ |
+| Extra | **Leave group:** a member (not the owner) can step back. Everyone left in the group gets a friendly note in the 🔔 bell. Before booking, the spot opens again. After booking, the booking stays as booked, and the leaver's share stays on it (marked "left the group") for the group to settle | ✅ |
 
 ## Known limitations
 - No real authentication, by design (M1). Anyone can pick any profile.
