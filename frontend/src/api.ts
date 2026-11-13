@@ -75,6 +75,11 @@ export interface HotelResult {
   best: RoomOption | null; options: RoomOption[]; unavailable_reason: string | null;
 }
 export interface HotelsResponse { guests: number; nights: number; lowest_budget: number; results: HotelResult[]; saves: Record<string, string[]>; booking: Booking | null }
+export interface PlanItem {
+  id: number; kind: "ACTIVITY" | "TODO"; day: string | null; time: string | null; body: string; done: boolean;
+  assignee: { id: string; name: string } | null; created_by: { id: string; name: string } | null; created_at: string;
+}
+export interface PlanResponse { days: string[]; activities: PlanItem[]; todos: PlanItem[] }
 export interface Message { id: number; traveller_id: string; name: string; body: string; created_at: string }
 
 // ---------- formatting ----------

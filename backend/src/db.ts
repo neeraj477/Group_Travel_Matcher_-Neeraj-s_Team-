@@ -56,6 +56,13 @@ CREATE TABLE IF NOT EXISTS messages (
   traveller_id TEXT NOT NULL REFERENCES travellers(id), body TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+-- Group planning (S2): day-by-day activities and a shared to-do list. ACTIVITY rows have a day; TODO rows may have an assignee.
+CREATE TABLE IF NOT EXISTS plan_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, group_id TEXT NOT NULL REFERENCES groups(id),
+  kind TEXT NOT NULL CHECK (kind IN ('ACTIVITY','TODO')), day TEXT, time TEXT, body TEXT NOT NULL,
+  assignee_id TEXT REFERENCES travellers(id), done_at TEXT, created_by TEXT NOT NULL REFERENCES travellers(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 -- Bell notifications (e.g. "a groupmate left"). traveller_id is the recipient, actor_id who caused it.
 CREATE TABLE IF NOT EXISTS notifications (
   id INTEGER PRIMARY KEY AUTOINCREMENT, traveller_id TEXT NOT NULL REFERENCES travellers(id),

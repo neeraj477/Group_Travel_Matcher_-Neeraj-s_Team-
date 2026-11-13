@@ -8,6 +8,7 @@ import { cityScene, hotelScenes } from "../scenes";
 import { Avatar, Confetti, CostStrip, CountUp, Loading, Modal, Scene, useApp, useInterestLabel } from "../ui";
 import { splitName } from "./CreateGroup";
 import { lastSearch } from "./FindGroups";
+import TripPlanner from "./TripPlanner";
 
 export default function GroupPage() {
   const { id } = useParams();
@@ -128,6 +129,12 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
   const choice = saved.find((s) => s.room === selected) ?? saved[0];
   const booking = h?.booking ?? g.booking;
   const myShare = booking?.shares.find((s) => s.traveller_id === me?.id)?.amount_paise;
+  // Once booked, other stays are no longer a choice: show only the booked hotel, priced on the booked room.
+  const bookedStay = useMemo(() => {
+    if (!booking || !h) return null;
+    const r = h.results.find((x) => x.hotel.hotel_id === booking.hotel.hotel_id);
+    return r ? { ...r, best: r.options.find((o) => o.room_id === booking.room.room_id) ?? r.best } : null;
+  }, [booking, h]);
 
   async function toggleSave(room: string) {
     try { const r = await api<{ saves: Record<string, string[]> }>(`/groups/${g.id}/saved`, { body: { room_id: room } }); setH((x) => (x ? { ...x, saves: r.saves } : x)); }
@@ -192,12 +199,18 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
               {h && <button className={"chip" + (budgetOnly ? " on" : "")} onClick={() => setBudgetOnly(!budgetOnly)}>≤ {inr(h.lowest_budget)} pp</button>}
             </div>
           </div>
-          {!h ? <Loading text="Pricing stays for your dates…" /> : shown.length === 0 ? (
+          {booking ? (
+            <>
+              {!h ? <Loading text="Loading your stay…" /> : bookedStay && <HotelCard r={bookedStay} i={0} n={1} g={g} saves={h.saves} lowest={h.lowest_budget} locked onSave={toggleSave} />}
+              <TripPlanner g={g} />
+              <Chat big groupId={g.id} meId={me!.id} members={g.members.map((m) => ({ id: m.id, name: m.name }))} />
+            </>
+          ) : !h ? <Loading text="Pricing stays for your dates…" /> : shown.length === 0 ? (
             <div className="gl empty"><h2>No stays fit</h2><p className="sub">Nothing is free on every night within this budget. Turn off the budget filter.</p></div>
           ) : shown.map((r, i) => (
             <HotelCard key={r.hotel.hotel_id} r={r} i={i} n={bookable.indexOf(r) + 1} g={g} saves={h.saves} lowest={h.lowest_budget} locked={!!booking} onSave={toggleSave} />
           ))}
-          {h && <MapCard hotels={bookable.slice(0, 3)} all={h.results} city={g.city} saves={h.saves} guests={guests} />}
+          {h && !booking && <MapCard hotels={bookable.slice(0, 3)} all={h.results} city={g.city} saves={h.saves} guests={guests} />}
         </div>
 
         <div>
@@ -221,7 +234,7 @@ function CommonPage({ g, reload }: { g: GroupDetail; reload: () => void }) {
             ))}
             {!booking && <button className="btn bp" style={{ width: "100%", marginTop: 14, height: 44 }} disabled={!choice || !choice.opt.available} onClick={() => choice && setConfirm({ hotel: choice.hotel, opt: choice.opt })}>Finalise booking for the group</button>}
           </div>
-          <Chat groupId={g.id} meId={me!.id} members={g.members.map((m) => ({ id: m.id, name: m.name }))} />
+          {booking ? <TripGlance g={g} b={booking} myShare={myShare} /> : <Chat groupId={g.id} meId={me!.id} members={g.members.map((m) => ({ id: m.id, name: m.name }))} />}
           {!g.is_owner && !booking && (
             <button className="btn bleave" style={{ width: "100%", marginTop: 16 }} onClick={() => setLeaving("ask")}>Leave group</button>
           )}
@@ -424,7 +437,29 @@ function BookedModal({ b, g, fresh, onClose }: { b: Booking; g: GroupDetail; fre
   );
 }
 
-function Chat({ groupId, meId, members }: { groupId: string; meId: string; members: { id: string; name: string }[] }) {
+/** Local clock time / day label for a SQLite UTC timestamp ("YYYY-MM-DD HH:MM:SS"). */
+const msgDate = (sqlUtc: string) => new Date(sqlUtc.replace(" ", "T") + "Z");
+const msgTime = (sqlUtc: string) => msgDate(sqlUtc).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const msgDay = (sqlUtc: string) => msgDate(sqlUtc).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+
+/** Right-column summary once the stay is booked (the chat moves to the main column). */
+function TripGlance({ g, b, myShare }: { g: GroupDetail; b: Booking; myShare: number | undefined }) {
+  const rows: [string, string][] = [
+    ["Check-in", dLong(g.check_in)], ["Check-out", dLong(g.check_out)], ["Stay", `${b.rooms} × ${b.room.name}`],
+    ["Group total", inr(b.total_inr)], ...(myShare !== undefined ? [["You pay", paise(myShare)] as [string, string]] : []),
+  ];
+  return (
+    <div className="gl rise" style={{ ["--i" as string]: 2, marginTop: 16 } as CSSProperties}>
+      <h3>Trip at a glance</h3>
+      <div style={{ marginTop: 12, fontSize: 12.5 }}>
+        {rows.map(([k, v]) => <div key={k} className="row" style={{ justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line)" }}><span className="mu2">{k}</span><b style={{ fontWeight: 600 }}>{v}</b></div>)}
+      </div>
+      <div className="mu2" style={{ fontSize: 11.5, marginTop: 10 }}>Times in {g.timezone}. Plan the days and chat below.</div>
+    </div>
+  );
+}
+
+function Chat({ groupId, meId, members, big = false }: { groupId: string; meId: string; members: { id: string; name: string }[]; big?: boolean }) {
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const box = useRef<HTMLDivElement>(null);
@@ -437,21 +472,46 @@ function Chat({ groupId, meId, members }: { groupId: string; meId: string; membe
     await api(`/groups/${groupId}/messages`, { body: { body } }).catch(() => setText(body));
     void load();
   }
+  const nameOf = (m: Message) => members.find((x) => x.id === m.traveller_id)?.name ?? m.name;
   return (
-    <div className="gl rise" style={{ ["--i" as string]: 2, marginTop: 16 } as CSSProperties}>
-      <h3>Group chat</h3>
-      <div ref={box} style={{ marginTop: 12, fontSize: 12.5, maxHeight: 300, overflow: "auto" }}>
-        {msgs.length === 0 && <div className="mu2">No messages yet. Say hi and talk through the stays.</div>}
-        {msgs.map((m) => m.traveller_id === meId ? (
-          <div className="row" style={{ justifyContent: "flex-end", marginTop: 8 }} key={m.id}><div style={{ background: "#f4f2ee", color: "#0b0d11", fontWeight: 500, padding: "8px 12px", borderRadius: "12px 12px 4px 12px", maxWidth: "80%" }}>{m.body}</div></div>
-        ) : (
-          <div className="row" style={{ alignItems: "flex-start", marginTop: 8 }} key={m.id}>
-            <Avatar id={m.traveller_id} name={members.find((x) => x.id === m.traveller_id)?.name ?? m.name} size={24} />
-            <div style={{ background: "rgba(255,255,255,.07)", padding: "8px 12px", borderRadius: "12px 12px 12px 4px", maxWidth: "80%" }}>{m.body}</div>
-          </div>
-        ))}
+    <div className="gl rise" style={{ ["--i" as string]: 3, marginTop: 16 } as CSSProperties}>
+      {big ? (
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <div><h2>Group <em>chat</em></h2><div className="mu2" style={{ fontSize: 12, marginTop: 2 }}>{members.map((m) => firstName(m.name)).join(", ")}</div></div>
+          <div className="row">{members.map((m, i) => <Avatar key={m.id} id={m.id} name={m.name} size={28} style={{ marginLeft: i ? -8 : 0 }} />)}</div>
+        </div>
+      ) : <h3>Group chat</h3>}
+      <div ref={box} style={{ marginTop: 12, fontSize: big ? 13.5 : 12.5, height: big ? 460 : undefined, maxHeight: big ? undefined : 300, overflow: "auto", paddingRight: 4,
+        ...(big ? { padding: "6px 14px 6px 6px", background: "rgba(0,0,0,.18)", border: "1px solid var(--line)", borderRadius: 4 } : {}) }}>
+        {msgs.length === 0 && <div className="mu2" style={big ? { textAlign: "center", marginTop: 180 } : {}}>{big ? "No messages yet. Start planning the trip together." : "No messages yet. Say hi and talk through the stays."}</div>}
+        {msgs.map((m, i) => {
+          const newDay = big && (i === 0 || msgDay(msgs[i - 1].created_at) !== msgDay(m.created_at));
+          const sameSender = i > 0 && !newDay && msgs[i - 1].traveller_id === m.traveller_id;
+          return (
+            <div key={m.id}>
+              {newDay && <div className="mu2" style={{ textAlign: "center", fontSize: 10.5, letterSpacing: ".14em", textTransform: "uppercase", margin: "14px 0 6px" }}>{msgDay(m.created_at)}</div>}
+              {m.traveller_id === meId ? (
+                <div className="row" style={{ justifyContent: "flex-end", marginTop: sameSender ? 3 : 8, alignItems: "flex-end", gap: 6 }}>
+                  {big && <span className="mu2" style={{ fontSize: 10.5 }}>{msgTime(m.created_at)}</span>}
+                  <div style={{ background: "#f4f2ee", color: "#0b0d11", fontWeight: 500, padding: "8px 12px", borderRadius: "12px 12px 4px 12px", maxWidth: big ? "70%" : "80%", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{m.body}</div>
+                </div>
+              ) : (
+                <div className="row" style={{ alignItems: "flex-start", marginTop: sameSender ? 3 : 8 }}>
+                  {sameSender && big ? <span style={{ width: 24, flex: "none" }} /> : <Avatar id={m.traveller_id} name={nameOf(m)} size={24} />}
+                  <div style={{ maxWidth: big ? "70%" : "80%" }}>
+                    {big && !sameSender && <div className="mu2" style={{ fontSize: 11, margin: "0 0 3px 2px" }}><b style={{ color: "var(--mu)", fontWeight: 600 }}>{firstName(nameOf(m))}</b> · {msgTime(m.created_at)}</div>}
+                    <div style={{ background: "rgba(255,255,255,.07)", padding: "8px 12px", borderRadius: "12px 12px 12px 4px", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{m.body}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); void send(); }}><input id="group-chat-input" className="in" style={{ marginTop: 10 }} placeholder="Message the group…" value={text} onChange={(e) => setText(e.target.value)} maxLength={1000} /></form>
+      <form className="row" style={{ gap: 6, marginTop: 10 }} onSubmit={(e) => { e.preventDefault(); void send(); }}>
+        <input id="group-chat-input" className="in" style={{ flex: 1 }} placeholder="Message the group…" value={text} onChange={(e) => setText(e.target.value)} maxLength={1000} />
+        {big && <button className="btn sm bp" disabled={!text.trim()}>Send</button>}
+      </form>
     </div>
   );
 }

@@ -49,3 +49,9 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS travellers_username ON travellers(username COLLATE NOCASE);
+CREATE TABLE IF NOT EXISTS plan_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, group_id TEXT NOT NULL REFERENCES groups(id),
+  kind TEXT NOT NULL CHECK (kind IN ('ACTIVITY','TODO')), day TEXT, time TEXT, body TEXT NOT NULL,
+  assignee_id TEXT REFERENCES travellers(id), done_at TEXT, created_by TEXT NOT NULL REFERENCES travellers(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

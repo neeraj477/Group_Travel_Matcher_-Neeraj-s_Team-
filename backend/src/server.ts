@@ -395,6 +395,66 @@ app.post("/api/groups/:id/booking", wrap((req) => {
   return bookingView(getBooking(g.id));
 }));
 
+// ---------- group planning (S2) ----------
+// Members plan each day of the trip (check-in day through check-out day) and share a to-do list.
+const tripDays = (g: Group) => [...nightList(g.check_in, g.check_out), g.check_out];
+function planItemOr404(g: Group, itemId: string) {
+  const row = db.prepare("SELECT * FROM plan_items WHERE id = ? AND group_id = ?").get(Number(itemId), g.id) as any;
+  if (!row) throw new HttpError(404, "Plan item not found.");
+  return row;
+}
+app.get("/api/groups/:id/plan", wrap((req) => {
+  const t = me(req);
+  const g = groupOr404(String(req.params.id));
+  requireMember(g, t);
+  const who = (id: string | null) => (id ? { id, name: getTraveller(id)?.name ?? id } : null);
+  const rows = (db.prepare("SELECT * FROM plan_items WHERE group_id = ? ORDER BY day, time IS NULL, time, id").all(g.id) as any[]).map((r) => ({
+    id: r.id, kind: r.kind, day: r.day, time: r.time, body: r.body, done: r.done_at !== null,
+    assignee: who(r.assignee_id), created_by: who(r.created_by), created_at: r.created_at,
+  }));
+  return { days: tripDays(g), activities: rows.filter((r) => r.kind === "ACTIVITY"), todos: rows.filter((r) => r.kind === "TODO") };
+}));
+app.post("/api/groups/:id/plan", wrap((req) => {
+  const t = me(req);
+  const g = groupOr404(String(req.params.id));
+  requireMember(g, t);
+  const b = req.body ?? {};
+  const body = typeof b.body === "string" ? b.body.trim().slice(0, 200) : "";
+  if (!body) throw new ValidationError("body", "Write what you're planning first.");
+  if (b.kind !== "ACTIVITY" && b.kind !== "TODO") throw new ValidationError("kind", "Pick an activity or a to-do.");
+  let day: string | null = null, time: string | null = null, assignee: string | null = null;
+  if (b.kind === "ACTIVITY") {
+    if (!tripDays(g).includes(String(b.day))) throw new ValidationError("day", "Pick a day of the trip.");
+    day = String(b.day);
+    if (b.time) {
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(b.time))) throw new ValidationError("time", "Use a time like 09:30.");
+      time = String(b.time);
+    }
+  } else if (b.assignee_id) {
+    if (!g.member_ids.includes(String(b.assignee_id))) throw new ValidationError("assignee_id", "Assign it to someone in the group.");
+    assignee = String(b.assignee_id);
+  }
+  db.prepare("INSERT INTO plan_items (group_id,kind,day,time,body,assignee_id,created_by) VALUES (?,?,?,?,?,?,?)")
+    .run(g.id, b.kind, day, time, body, assignee, t.id);
+  return { ok: true };
+}));
+app.post("/api/groups/:id/plan/:itemId/toggle", wrap((req) => {
+  const t = me(req);
+  const g = groupOr404(String(req.params.id));
+  requireMember(g, t);
+  const item = planItemOr404(g, String(req.params.itemId));
+  db.prepare("UPDATE plan_items SET done_at = CASE WHEN done_at IS NULL THEN datetime('now') ELSE NULL END WHERE id = ?").run(item.id);
+  return { ok: true };
+}));
+app.delete("/api/groups/:id/plan/:itemId", wrap((req) => {
+  const t = me(req);
+  const g = groupOr404(String(req.params.id));
+  requireMember(g, t);
+  const item = planItemOr404(g, String(req.params.itemId));
+  db.prepare("DELETE FROM plan_items WHERE id = ?").run(item.id);
+  return { ok: true };
+}));
+
 // ---------- chat (S1) ----------
 app.get("/api/groups/:id/messages", wrap((req) => {
   const t = me(req);
